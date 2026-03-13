@@ -1,0 +1,1317 @@
+basePath: /api/v1
+definitions:
+  auth.LoginInput:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  auth.LoginResponse:
+    properties:
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/auth.UserResponse'
+    type: object
+  auth.RegisterOwnerInput:
+    properties:
+      business_name:
+        type: string
+      email:
+        type: string
+      owner_name:
+        type: string
+      password:
+        type: string
+    type: object
+  auth.UserResponse:
+    properties:
+      branch_id:
+        type: string
+      business_id:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      role:
+        type: string
+    type: object
+  branch.Branch:
+    properties:
+      address:
+        type: string
+      business_id:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+    type: object
+  branch.CreateBranchInput:
+    properties:
+      address:
+        type: string
+      name:
+        type: string
+    type: object
+  branch.UpdateBranchInput:
+    properties:
+      address:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+    type: object
+  business.Business:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      service_charge_percent:
+        type: number
+      slug:
+        type: string
+      tax_percent:
+        type: number
+    type: object
+  business.UpdateBusinessInput:
+    properties:
+      name:
+        type: string
+      service_charge_percent:
+        type: number
+      tax_percent:
+        type: number
+    type: object
+  dashboard.BranchRev:
+    properties:
+      branch_id:
+        type: string
+      branch_name:
+        type: string
+      revenue:
+        type: number
+    type: object
+  dashboard.CashierDashboard:
+    properties:
+      open_orders_count:
+        type: integer
+      orders_handled_today:
+        type: integer
+      total_collected_today:
+        type: number
+    type: object
+  dashboard.OwnerDashboard:
+    properties:
+      revenue_per_branch:
+        items:
+          $ref: '#/definitions/dashboard.BranchRev'
+        type: array
+      top_menu_items:
+        items:
+          $ref: '#/definitions/dashboard.TopMenuItem'
+        type: array
+      total_orders_today:
+        type: integer
+      total_revenue_today:
+        type: number
+    type: object
+  dashboard.TopMenuItem:
+    properties:
+      menu_item_id:
+        type: string
+      menu_item_name:
+        type: string
+      total_sold:
+        type: integer
+    type: object
+  httputil.ErrorResponse:
+    properties:
+      error:
+        example: something went wrong
+        type: string
+      success:
+        example: false
+        type: boolean
+    type: object
+  httputil.MessageResponse:
+    properties:
+      data:
+        example: ok
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+  menu.CreateMenuItemInput:
+    properties:
+      category:
+        type: string
+      description:
+        type: string
+      name:
+        type: string
+      price:
+        type: number
+    type: object
+  menu.MenuItem:
+    properties:
+      business_id:
+        type: string
+      category:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      is_available:
+        type: boolean
+      name:
+        type: string
+      price:
+        type: number
+    type: object
+  menu.UpdateMenuItemInput:
+    properties:
+      category:
+        type: string
+      description:
+        type: string
+      is_available:
+        type: boolean
+      name:
+        type: string
+      price:
+        type: number
+    type: object
+  modifier.CreateModifierGroupInput:
+    properties:
+      is_required:
+        type: boolean
+      max_select:
+        type: integer
+      name:
+        type: string
+      options:
+        items:
+          properties:
+            extra_price:
+              type: number
+            name:
+              type: string
+          type: object
+        type: array
+    type: object
+  modifier.ModifierGroup:
+    properties:
+      business_id:
+        type: string
+      id:
+        type: string
+      is_required:
+        type: boolean
+      max_select:
+        type: integer
+      name:
+        type: string
+      options:
+        items:
+          $ref: '#/definitions/modifier.ModifierOption'
+        type: array
+    type: object
+  modifier.ModifierOption:
+    properties:
+      extra_price:
+        type: number
+      group_id:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  modifier.UpdateModifierGroupInput:
+    properties:
+      is_required:
+        type: boolean
+      max_select:
+        type: integer
+      name:
+        type: string
+    type: object
+  order.AddOrderItemInput:
+    properties:
+      menu_item_id:
+        type: string
+      modifier_option_ids:
+        items:
+          type: string
+        type: array
+      notes:
+        type: string
+      quantity:
+        type: integer
+    type: object
+  order.CreateOrderInput:
+    properties:
+      branch_id:
+        type: string
+      customer_name:
+        type: string
+      table_id:
+        type: string
+      type:
+        type: string
+    type: object
+  order.Order:
+    properties:
+      branch_id:
+        type: string
+      business_id:
+        type: string
+      cashier_id:
+        type: string
+      created_at:
+        type: string
+      customer_name:
+        type: string
+      id:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/order.OrderItem'
+        type: array
+      service_charge_amount:
+        type: number
+      status:
+        type: string
+      subtotal:
+        type: number
+      table_id:
+        type: string
+      tax_amount:
+        type: number
+      total:
+        type: number
+      type:
+        type: string
+    type: object
+  order.OrderItem:
+    properties:
+      id:
+        type: string
+      menu_item_id:
+        type: string
+      modifiers:
+        items:
+          $ref: '#/definitions/order.OrderItemModifier'
+        type: array
+      notes:
+        type: string
+      order_id:
+        type: string
+      quantity:
+        type: integer
+      subtotal:
+        type: number
+      unit_price:
+        type: number
+    type: object
+  order.OrderItemModifier:
+    properties:
+      extra_price:
+        type: number
+      id:
+        type: string
+      modifier_option_id:
+        type: string
+      order_item_id:
+        type: string
+    type: object
+  order.UpdateOrderInput:
+    properties:
+      customer_name:
+        type: string
+      status:
+        type: string
+    type: object
+  order.UpdateOrderItemInput:
+    properties:
+      modifier_option_ids:
+        items:
+          type: string
+        type: array
+      notes:
+        type: string
+      quantity:
+        type: integer
+    type: object
+  payment.PayOrderInput:
+    properties:
+      amount_paid:
+        type: number
+      method:
+        type: string
+    type: object
+  payment.Payment:
+    properties:
+      amount_paid:
+        type: number
+      change_amount:
+        type: number
+      id:
+        type: string
+      method:
+        type: string
+      order_id:
+        type: string
+      paid_at:
+        type: string
+    type: object
+  staff.CreateStaffInput:
+    properties:
+      branch_id:
+        type: string
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        type: string
+      role:
+        type: string
+    type: object
+  staff.Staff:
+    properties:
+      branch_id:
+        type: string
+      business_id:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+      role:
+        type: string
+    type: object
+  staff.UpdateStaffInput:
+    properties:
+      branch_id:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+    type: object
+  table.CreateTableInput:
+    properties:
+      branch_id:
+        type: string
+      name:
+        type: string
+      qr_code:
+        type: string
+    type: object
+  table.Table:
+    properties:
+      branch_id:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      qr_code:
+        type: string
+      status:
+        type: string
+    type: object
+  table.UpdateTableInput:
+    properties:
+      name:
+        type: string
+      qr_code:
+        type: string
+      status:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Multi-tenant POS SaaS backend
+  title: Bayar.in API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user and return a JWT token
+      parameters:
+      - description: Login payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.LoginInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.LoginResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponse'
+      summary: Login
+      tags:
+      - Auth
+  /auth/logout:
+    post:
+      description: Revoke the current session token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httputil.MessageResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Logout
+      tags:
+      - Auth
+  /auth/me:
+    get:
+      description: Returns the authenticated user's profile
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.UserResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get current user
+      tags:
+      - Auth
+  /auth/register-owner:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new business and an owner account atomically
+      parameters:
+      - description: Registration payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.RegisterOwnerInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/auth.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponse'
+      summary: Register a new business owner
+      tags:
+      - Auth
+  /branches:
+    get:
+      description: Returns all branches that belong to the authenticated owner's business
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/branch.Branch'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List branches
+      tags:
+      - Branches
+    post:
+      consumes:
+      - application/json
+      description: Create a new branch under the authenticated owner's business
+      parameters:
+      - description: Branch payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/branch.CreateBranchInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/branch.Branch'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create branch
+      tags:
+      - Branches
+  /branches/{id}:
+    patch:
+      consumes:
+      - application/json
+      description: Partially update a branch's name, address, or active status
+      parameters:
+      - description: Branch UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update payload (all fields optional)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/branch.UpdateBranchInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/branch.Branch'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update branch
+      tags:
+      - Branches
+  /business:
+    get:
+      description: Returns the authenticated owner's business profile
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/business.Business'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get business
+      tags:
+      - Business
+    patch:
+      consumes:
+      - application/json
+      description: Partially update business name, tax percent, or service charge
+        percent
+      parameters:
+      - description: Update payload (all fields optional)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/business.UpdateBusinessInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/business.Business'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update business
+      tags:
+      - Business
+  /dashboard/cashier:
+    get:
+      description: 'Returns cashier-level stats: today''s transactions, open orders,
+        and revenue for this session'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dashboard.CashierDashboard'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Cashier dashboard
+      tags:
+      - Dashboard
+  /dashboard/owner:
+    get:
+      description: 'Returns business-level stats: total revenue, orders, top menu
+        items, and per-branch breakdown'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dashboard.OwnerDashboard'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Owner dashboard
+      tags:
+      - Dashboard
+  /menu:
+    get:
+      description: Returns all menu items for the authenticated owner's business,
+        ordered by category and name
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/menu.MenuItem'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List menu items
+      tags:
+      - Menu
+    post:
+      consumes:
+      - application/json
+      description: Create a new menu item under the authenticated owner's business
+      parameters:
+      - description: Menu item payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/menu.CreateMenuItemInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/menu.MenuItem'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create menu item
+      tags:
+      - Menu
+  /menu/{id}:
+    patch:
+      consumes:
+      - application/json
+      description: Partially update a menu item's name, description, price, category,
+        or availability
+      parameters:
+      - description: Menu item UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update payload (all fields optional)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/menu.UpdateMenuItemInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/menu.MenuItem'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update menu item
+      tags:
+      - Menu
+  /modifiers:
+    get:
+      description: Returns all modifier groups (with their options) for the authenticated
+        owner's business
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/modifier.ModifierGroup'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List modifier groups
+      tags:
+      - Modifiers
+    post:
+      consumes:
+      - application/json
+      description: Create a modifier group with options in a single transaction
+      parameters:
+      - description: Modifier group payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/modifier.CreateModifierGroupInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/modifier.ModifierGroup'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create modifier group
+      tags:
+      - Modifiers
+  /modifiers/{id}:
+    patch:
+      consumes:
+      - application/json
+      description: Partially update a modifier group's name, required flag, or max
+        selections
+      parameters:
+      - description: Modifier group UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update payload (all fields optional)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/modifier.UpdateModifierGroupInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/modifier.ModifierGroup'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update modifier group
+      tags:
+      - Modifiers
+  /orders:
+    get:
+      description: 'Returns orders for the business. Cashiers see only their branch''s
+        orders. Filter by status: open|paid|cancelled.'
+      parameters:
+      - description: Filter by status (open, paid, cancelled)
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/order.Order'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List orders
+      tags:
+      - Orders
+    post:
+      consumes:
+      - application/json
+      description: Create a new order. Type must be "dine_in" or "takeaway". table_id
+        is optional.
+      parameters:
+      - description: Order payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/order.CreateOrderInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/order.Order'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create order
+      tags:
+      - Orders
+  /orders/{id}:
+    get:
+      description: Returns a single order with all its items and applied modifiers
+      parameters:
+      - description: Order UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/order.Order'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get order by ID
+      tags:
+      - Orders
+    patch:
+      consumes:
+      - application/json
+      description: Update order status or customer name. Cannot update paid or cancelled
+        orders.
+      parameters:
+      - description: Order UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update payload (all fields optional)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/order.UpdateOrderInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/order.Order'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update order
+      tags:
+      - Orders
+  /orders/{id}/items:
+    post:
+      consumes:
+      - application/json
+      description: Add a menu item (with optional modifier options) to an open order.
+        Recalculates totals.
+      parameters:
+      - description: Order UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Item payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/order.AddOrderItemInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/order.OrderItem'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Add item to order
+      tags:
+      - Order Items
+  /orders/{id}/items/{item_id}:
+    delete:
+      description: Remove an item from an open order. Recalculates order totals.
+      parameters:
+      - description: Order UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Order item UUID
+        in: path
+        name: item_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httputil.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete order item
+      tags:
+      - Order Items
+    patch:
+      consumes:
+      - application/json
+      description: Update quantity or notes of an existing order item. Only works
+        on open orders.
+      parameters:
+      - description: Order UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Order item UUID
+        in: path
+        name: item_id
+        required: true
+        type: string
+      - description: Update payload (all fields optional)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/order.UpdateOrderItemInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/order.OrderItem'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update order item
+      tags:
+      - Order Items
+  /orders/{id}/pay:
+    post:
+      consumes:
+      - application/json
+      description: Process payment for an open order. Method must be "cash", "qris",
+        or "transfer". amount_paid must be >= order total. Atomically marks order
+        as paid and releases table if dine_in.
+      parameters:
+      - description: Order UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Payment payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/payment.PayOrderInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/payment.Payment'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Pay order
+      tags:
+      - Payment
+  /staff:
+    get:
+      description: Returns all staff members for the authenticated owner's business
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/staff.Staff'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List staff
+      tags:
+      - Staff
+    post:
+      consumes:
+      - application/json
+      description: Create a new cashier account. Role is always set to "cashier".
+        branch_id is required.
+      parameters:
+      - description: Staff payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/staff.CreateStaffInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/staff.Staff'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create staff (cashier)
+      tags:
+      - Staff
+  /staff/{id}:
+    patch:
+      consumes:
+      - application/json
+      description: Update a staff member's name, active status, or assigned branch.
+        Cannot deactivate owner.
+      parameters:
+      - description: Staff UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update payload (all fields optional)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/staff.UpdateStaffInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/staff.Staff'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update staff
+      tags:
+      - Staff
+  /tables:
+    get:
+      description: Returns all tables. Filter by branch_id query param (optional).
+      parameters:
+      - description: Branch UUID to filter tables
+        in: query
+        name: branch_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/table.Table'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List tables
+      tags:
+      - Tables
+    post:
+      consumes:
+      - application/json
+      description: Create a new table under a branch. The branch must belong to the
+        authenticated owner's business.
+      parameters:
+      - description: Table payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/table.CreateTableInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/table.Table'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create table
+      tags:
+      - Tables
+  /tables/{id}:
+    patch:
+      consumes:
+      - application/json
+      description: Partially update a table's name, status ("available"|"occupied"),
+        or QR code
+      parameters:
+      - description: Table UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update payload (all fields optional)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/table.UpdateTableInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/table.Table'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update table
+      tags:
+      - Tables
+securityDefinitions:
+  BearerAuth:
+    description: 'Paste your JWT token as: Bearer <token>'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
