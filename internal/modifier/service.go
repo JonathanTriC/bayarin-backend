@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -189,4 +190,36 @@ func (s *Service) Update(businessID, groupID uuid.UUID, input UpdateModifierGrou
 	}
 	g.Options = opts
 	return &g, nil
+}
+
+// Search returns modifier groups whose name matches query (ILIKE), scoped to the business.
+func (s *Service) Search(businessID uuid.UUID, query string) ([]ModifierGroup, error) {
+	like := "%" + strings.TrimSpace(query) + "%"
+	rows, err := s.db.Query(
+		`SELECT id, business_id, name, is_required, max_select
+		 FROM modifier_groups
+		 WHERE business_id = $1 AND name ILIKE $2
+		 ORDER BY name`, businessID, like)
+	if err != nil {
+		return nil, fmt.Errorf("search modifier groups: %w", err)
+	}
+	defer rows.Close()
+
+	var groups []ModifierGroup
+	for rows.Next() {
+		var g ModifierGroup
+		if err := rows.Scan(&g.ID, &g.BusinessID, &g.Name, &g.IsRequired, &g.MaxSelect); err != nil {
+			return nil, err
+		}
+		opts, err := s.listOptions(g.ID)
+		if err != nil {
+			return nil, err
+		}
+		g.Options = opts
+		groups = append(groups, g)
+	}
+	if groups == nil {
+		groups = []ModifierGroup{}
+	}
+	return groups, nil
 }

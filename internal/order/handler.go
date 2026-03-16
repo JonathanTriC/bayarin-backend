@@ -34,6 +34,30 @@ func (h *Handler) List(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"success": true, "data": orders})
 }
 
+// Search godoc
+//
+//	@Summary		Search orders
+//	@Description	Search orders by customer name (case-insensitive). Optionally filter by type (dine_in|takeaway) and status (open|paid|cancelled). Cashiers are scoped to their branch.
+//	@Tags			Orders
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			q		query		string	false	"Search keyword (matches customer name)"
+//	@Param			type	query		string	false	"Filter by order type: dine_in or takeaway"
+//	@Param			status	query		string	false	"Filter by status: open, paid, or cancelled"
+//	@Success		200		{array}		Order
+//	@Failure		401		{object}	httputil.Error401Response
+//	@Failure		403		{object}	httputil.Error403Response
+//	@Failure		500		{object}	httputil.Error500Response
+//	@Router			/orders/search [get]
+func (h *Handler) Search(c *fiber.Ctx) error {
+	auth := c.Locals("auth").(middleware.AuthContext)
+	orders, err := h.svc.Search(auth, c.Query("q"), c.Query("type"), c.Query("status"))
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"success": false, "error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"success": true, "data": orders})
+}
+
 // Create godoc
 //
 //	@Summary		Create order

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -302,4 +303,48 @@ func (s *Service) Update(businessID, itemID uuid.UUID, input UpdateMenuItemInput
 	m.Modifiers = mods
 
 	return &m, nil
+}
+
+// Search returns menu items whose name or description match query (ILIKE).
+// Optionally filters by category. Results are scoped to the given business.
+func (s *Service) Search(businessID uuid.UUID, query, category string) ([]MenuItemResponse, error) {
+	like := "%" + strings.TrimSpace(query) + "%"
+	args := []interface{}{businessID, like}
+
+	sqlStr := `SELECT id, business_id, name, description, price, category, is_available, created_at
+	           FROM menu_items
+	           WHERE business_id = $1 AND (name ILIKE $2 OR description ILIKE $2)`
+
+	if category != "" {
+		args = append(args, category)
+		sqlStr += fmt.Sprintf(" AND category = $%d", len(args))
+	}
+	sqlStr += " ORDER BY category, name"
+
+	rows, err := s.db.Query(sqlStr, args...)
+	if err != nil {
+		return nil, fmt.Errorf("search menu items: %w", err)
+	}
+	defer rows.Close()
+
+	var items []MenuItemResponse
+	for rows.Next() {
+		var m MenuItemResponse
+		if err := rows.Scan(&m.ID, &m.BusinessID, &m.Name, &m.Description, &m.Price, &m.Category, &m.IsAvailable, &m.CreatedAt); err != nil {
+			return nil, err
+		}
+		mods, err := s.getModifiersOptions(m.ID)
+		if err != nil {
+			return nil, err
+		}
+		if mods == nil {
+			mods = []ModifierGroupResponse{}
+		}
+		m.Modifiers = mods
+		items = append(items, m)
+	}
+	if items == nil {
+		items = []MenuItemResponse{}
+	}
+	return items, nil
 }

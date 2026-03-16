@@ -130,26 +130,30 @@ func main() {
 	staffRoute.Post("/", staffHdlr.Create)
 	staffRoute.Patch("/:id", staffHdlr.Update)
 
-	// ── MENU [auth + owner] ──
+	// ── MENU ──
+	api.Get("/menu/search", authMW, middleware.RequireCashierOrOwner(), menuHdlr.Search) // cashier + owner
+	api.Get("/menu", authMW, middleware.RequireCashierOrOwner(), menuHdlr.List)          // cashier + owner
 	menuRoute := api.Group("/menu", authMW, middleware.RequireOwner())
-	menuRoute.Get("/", menuHdlr.List)
 	menuRoute.Post("/", menuHdlr.Create)
 	menuRoute.Patch("/:id", menuHdlr.Update)
 
 	// ── MODIFIERS [auth + owner] ──
 	modifierRoute := api.Group("/modifiers", authMW, middleware.RequireOwner())
+	modifierRoute.Get("/search", modifierHdlr.Search)
 	modifierRoute.Get("/", modifierHdlr.List)
 	modifierRoute.Post("/", modifierHdlr.Create)
 	modifierRoute.Patch("/:id", modifierHdlr.Update)
 
-	// ── TABLES [auth + owner] ──
+	// ── TABLES ──
+	api.Get("/tables/search", authMW, middleware.RequireCashierOrOwner(), tableHdlr.Search) // cashier + owner
+	api.Get("/tables", authMW, middleware.RequireCashierOrOwner(), tableHdlr.List)          // cashier + owner
 	tableRoute := api.Group("/tables", authMW, middleware.RequireOwner())
-	tableRoute.Get("/", tableHdlr.List)
 	tableRoute.Post("/", tableHdlr.Create)
 	tableRoute.Patch("/:id", tableHdlr.Update)
 
 	// ── ORDERS [auth + cashier or owner] ──
 	orderRoute := api.Group("/orders", authMW, middleware.RequireCashierOrOwner())
+	orderRoute.Get("/search", orderHdlr.Search)
 	orderRoute.Get("/", orderHdlr.List)
 	orderRoute.Post("/", orderHdlr.Create)
 	orderRoute.Get("/:id", orderHdlr.GetByID)

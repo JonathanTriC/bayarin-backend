@@ -429,7 +429,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "List all menu items with nested modifier groups and options",
+                "description": "List all menu items with nested modifier groups and options. Accessible by owner and cashier.",
                 "produces": [
                     "application/json"
                 ],
@@ -453,10 +453,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/httputil.Error401Response"
                         }
                     },
-                    "403": {
-                        "description": "Forbidden",
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/httputil.Error403Response"
+                            "$ref": "#/definitions/httputil.Error500Response"
                         }
                     }
                 }
@@ -512,6 +512,60 @@ const docTemplate = `{
                         "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/httputil.Error403Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/menu/search": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Search menu items by name or description (case-insensitive). Optionally filter by category. Accessible by owner and cashier.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "menu"
+                ],
+                "summary": "Search menu items",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search keyword (matches name or description)",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by category",
+                        "name": "category",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/menu.MenuItemResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error401Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error500Response"
                         }
                     }
                 }
@@ -664,6 +718,60 @@ const docTemplate = `{
                 }
             }
         },
+        "/modifiers/search": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Search modifier groups by name (case-insensitive).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Modifiers"
+                ],
+                "summary": "Search modifier groups",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search keyword (matches modifier group name)",
+                        "name": "q",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/modifier.ModifierGroup"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error401Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error403Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error500Response"
+                        }
+                    }
+                }
+            }
+        },
         "/modifiers/{id}": {
             "patch": {
                 "security": [
@@ -796,6 +904,72 @@ const docTemplate = `{
                         "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/httputil.Error400Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/orders/search": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Search orders by customer name (case-insensitive). Optionally filter by type (dine_in|takeaway) and status (open|paid|cancelled). Cashiers are scoped to their branch.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Search orders",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search keyword (matches customer name)",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by order type: dine_in or takeaway",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status: open, paid, or cancelled",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/order.Order"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error401Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error403Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error500Response"
                         }
                     }
                 }
@@ -1247,7 +1421,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns all tables. Filter by branch_id query param (optional).",
+                "description": "Returns all tables. Filter by branch_id query param (optional). Accessible by owner and cashier.",
                 "produces": [
                     "application/json"
                 ],
@@ -1271,6 +1445,12 @@ const docTemplate = `{
                             "items": {
                                 "$ref": "#/definitions/table.Table"
                             }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error401Response"
                         }
                     },
                     "500": {
@@ -1320,6 +1500,66 @@ const docTemplate = `{
                         "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/httputil.Error400Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/tables/search": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Search tables by name (case-insensitive). Optionally filter by branch_id and/or status. Accessible by owner and cashier.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tables"
+                ],
+                "summary": "Search tables",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search keyword (matches table name)",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Branch UUID to filter tables",
+                        "name": "branch_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status: available or occupied",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/table.Table"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error401Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error500Response"
                         }
                     }
                 }

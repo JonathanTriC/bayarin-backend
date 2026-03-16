@@ -33,6 +33,28 @@ func (h *Handler) List(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"success": true, "data": groups})
 }
 
+// Search godoc
+//
+//	@Summary		Search modifier groups
+//	@Description	Search modifier groups by name (case-insensitive).
+//	@Tags			Modifiers
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			q	query		string	false	"Search keyword (matches modifier group name)"
+//	@Success		200	{array}		ModifierGroup
+//	@Failure		401	{object}	httputil.Error401Response
+//	@Failure		403	{object}	httputil.Error403Response
+//	@Failure		500	{object}	httputil.Error500Response
+//	@Router			/modifiers/search [get]
+func (h *Handler) Search(c *fiber.Ctx) error {
+	auth := c.Locals("auth").(middleware.AuthContext)
+	groups, err := h.svc.Search(auth.BusinessID, c.Query("q"))
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"success": false, "error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"success": true, "data": groups})
+}
+
 // Create godoc
 //
 //	@Summary		Create modifier group

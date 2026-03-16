@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/bayarin/backend/internal/middleware"
 	"github.com/google/uuid"
@@ -491,4 +492,57 @@ func (s *Service) recalculateOrder(orderID, businessID uuid.UUID) error {
 		subtotal, taxAmount, svcAmount, total, orderID,
 	)
 	return err
+}
+
+// Search returns orders whose customer_name matches query (ILIKE).
+// Optionally filters by type (dine_in|takeaway) and status (open|paid|cancelled).
+// Cashiers are restricted to their own branch. Owners see all branches.
+func (s *Service) Search(auth middleware.AuthContext, query, orderType, status string) ([]Order, error) {
+	like := "%" + strings.TrimSpace(query) + "%"
+	args := []interface{}{auth.BusinessID, like}
+
+	sqlStr := `SELECT id, business_id, branch_id, cashier_id, table_id, type, customer_name,
+	                  status, subtotal, tax_amount, service_charge_amount, total, created_at
+	           FROM orders
+	           WHERE business_id = $1 AND customer_name ILIKE $2`
+
+	if auth.Role == "cashier" && auth.BranchID != nil {
+		args = append(args, *auth.BranchID)
+		sqlStr += fmt.Sprintf(" AND branch_id = $%d", len(args))
+	}
+	if orderType != "" {
+		args = append(args, orderType)
+		sqlStr += fmt.Sprintf(" AND type = $%d", len(args))
+	}
+	if status != "" {
+		args = append(args, status)
+		sqlStr += fmt.Sprintf(" AND status = $%d", len(args))
+	}
+	sqlStr += " ORDER BY created_at DESC"
+
+	rows, err := s.db.Query(sqlStr, args...)
+	if err != nil {
+		return nil, fmt.Errorf("search orders: %w", err)
+	}
+	defer rows.Close()
+
+	var orders []Order
+	for rows.Next() {
+		var o Order
+		var tableID sql.NullString
+		if err := rows.Scan(&o.ID, &o.BusinessID, &o.BranchID, &o.CashierID, &tableID,
+			&o.Type, &o.CustomerName, &o.Status, &o.Subtotal, &o.TaxAmount,
+			&o.ServiceChargeAmount, &o.Total, &o.CreatedAt); err != nil {
+			return nil, err
+		}
+		if tableID.Valid {
+			parsed, _ := uuid.Parse(tableID.String)
+			o.TableID = &parsed
+		}
+		orders = append(orders, o)
+	}
+	if orders == nil {
+		orders = []Order{}
+	}
+	return orders, nil
 }

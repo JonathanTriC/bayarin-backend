@@ -17,17 +17,39 @@ func NewHandler(svc *Service) *Handler { return &Handler{svc: svc} }
 // List godoc
 //
 //	@Summary		List menu items
-//	@Description	List all menu items with nested modifier groups and options
+//	@Description	List all menu items with nested modifier groups and options. Accessible by owner and cashier.
 //	@Tags			menu
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Success		200	{array}		MenuItemResponse
 //	@Failure		401	{object}	httputil.Error401Response
-//	@Failure		403	{object}	httputil.Error403Response
+//	@Failure		500	{object}	httputil.Error500Response
 //	@Router			/menu [get]
 func (h *Handler) List(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)
 	items, err := h.svc.List(auth.BusinessID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"success": false, "error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"success": true, "data": items})
+}
+
+// Search godoc
+//
+//	@Summary		Search menu items
+//	@Description	Search menu items by name or description (case-insensitive). Optionally filter by category. Accessible by owner and cashier.
+//	@Tags			menu
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			q			query		string	false	"Search keyword (matches name or description)"
+//	@Param			category	query		string	false	"Filter by category"
+//	@Success		200			{array}		MenuItemResponse
+//	@Failure		401			{object}	httputil.Error401Response
+//	@Failure		500			{object}	httputil.Error500Response
+//	@Router			/menu/search [get]
+func (h *Handler) Search(c *fiber.Ctx) error {
+	auth := c.Locals("auth").(middleware.AuthContext)
+	items, err := h.svc.Search(auth.BusinessID, c.Query("q"), c.Query("category"))
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"success": false, "error": err.Error()})
 	}
@@ -69,8 +91,8 @@ func (h *Handler) Create(c *fiber.Ctx) error {
 //	@Accept			json
 //	@Produce		json
 //	@Security		BearerAuth
-//	@Param			id		path		string					true	"Menu item UUID"
-//	@Param			body	body		UpdateMenuItemInput		true	"Update payload — modifier_group_ids replaces all existing links"
+//	@Param			id		path		string				true	"Menu item UUID"
+//	@Param			body	body		UpdateMenuItemInput	true	"Update payload — modifier_group_ids replaces all existing links"
 //	@Success		200		{object}	MenuItemResponse
 //	@Failure 400 {object} httputil.Error400Response
 //	@Failure 401 {object} httputil.Error401Response

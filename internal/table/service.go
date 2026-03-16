@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -143,4 +144,45 @@ func (s *Service) Update(businessID, tableID uuid.UUID, input UpdateTableInput) 
 		return nil, fmt.Errorf("update table: %w", err)
 	}
 	return &t, nil
+}
+
+// Search returns tables whose name matches query (ILIKE), scoped to the business.
+// Optionally filters by branch_id and/or status.
+func (s *Service) Search(businessID uuid.UUID, query string, branchIDFilter *uuid.UUID, status string) ([]Table, error) {
+	like := "%" + strings.TrimSpace(query) + "%"
+	args := []interface{}{businessID, like}
+
+	sqlStr := `SELECT t.id, t.branch_id, t.name, t.qr_code, t.status, t.created_at
+	           FROM tables t
+	           JOIN branches b ON b.id = t.branch_id
+	           WHERE b.business_id = $1 AND t.name ILIKE $2`
+
+	if branchIDFilter != nil {
+		args = append(args, *branchIDFilter)
+		sqlStr += fmt.Sprintf(" AND t.branch_id = $%d", len(args))
+	}
+	if status != "" {
+		args = append(args, status)
+		sqlStr += fmt.Sprintf(" AND t.status = $%d", len(args))
+	}
+	sqlStr += " ORDER BY t.name"
+
+	rows, err := s.db.Query(sqlStr, args...)
+	if err != nil {
+		return nil, fmt.Errorf("search tables: %w", err)
+	}
+	defer rows.Close()
+
+	var tables []Table
+	for rows.Next() {
+		var t Table
+		if err := rows.Scan(&t.ID, &t.BranchID, &t.Name, &t.QRCode, &t.Status, &t.CreatedAt); err != nil {
+			return nil, err
+		}
+		tables = append(tables, t)
+	}
+	if tables == nil {
+		tables = []Table{}
+	}
+	return tables, nil
 }

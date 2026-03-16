@@ -799,7 +799,8 @@ paths:
       - Dashboard
   /menu:
     get:
-      description: List all menu items with nested modifier groups and options
+      description: List all menu items with nested modifier groups and options. Accessible
+        by owner and cashier.
       produces:
       - application/json
       responses:
@@ -813,10 +814,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/httputil.Error401Response'
-        "403":
-          description: Forbidden
+        "500":
+          description: Internal Server Error
           schema:
-            $ref: '#/definitions/httputil.Error403Response'
+            $ref: '#/definitions/httputil.Error500Response'
       security:
       - BearerAuth: []
       summary: List menu items
@@ -902,6 +903,41 @@ paths:
       summary: Update menu item
       tags:
       - menu
+  /menu/search:
+    get:
+      description: Search menu items by name or description (case-insensitive). Optionally
+        filter by category. Accessible by owner and cashier.
+      parameters:
+      - description: Search keyword (matches name or description)
+        in: query
+        name: q
+        type: string
+      - description: Filter by category
+        in: query
+        name: category
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/menu.MenuItemResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httputil.Error401Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error500Response'
+      security:
+      - BearerAuth: []
+      summary: Search menu items
+      tags:
+      - menu
   /modifiers:
     get:
       description: Returns all modifier groups (with their options) for the authenticated
@@ -983,6 +1019,40 @@ paths:
       security:
       - BearerAuth: []
       summary: Update modifier group
+      tags:
+      - Modifiers
+  /modifiers/search:
+    get:
+      description: Search modifier groups by name (case-insensitive).
+      parameters:
+      - description: Search keyword (matches modifier group name)
+        in: query
+        name: q
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/modifier.ModifierGroup'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httputil.Error401Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httputil.Error403Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error500Response'
+      security:
+      - BearerAuth: []
+      summary: Search modifier groups
       tags:
       - Modifiers
   /orders:
@@ -1243,6 +1313,50 @@ paths:
       summary: Pay order
       tags:
       - Payment
+  /orders/search:
+    get:
+      description: Search orders by customer name (case-insensitive). Optionally filter
+        by type (dine_in|takeaway) and status (open|paid|cancelled). Cashiers are
+        scoped to their branch.
+      parameters:
+      - description: Search keyword (matches customer name)
+        in: query
+        name: q
+        type: string
+      - description: 'Filter by order type: dine_in or takeaway'
+        in: query
+        name: type
+        type: string
+      - description: 'Filter by status: open, paid, or cancelled'
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/order.Order'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httputil.Error401Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httputil.Error403Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error500Response'
+      security:
+      - BearerAuth: []
+      summary: Search orders
+      tags:
+      - Orders
   /staff:
     get:
       description: Returns all staff members for the authenticated owner's business
@@ -1329,6 +1443,7 @@ paths:
   /tables:
     get:
       description: Returns all tables. Filter by branch_id query param (optional).
+        Accessible by owner and cashier.
       parameters:
       - description: Branch UUID to filter tables
         in: query
@@ -1343,6 +1458,10 @@ paths:
             items:
               $ref: '#/definitions/table.Table'
             type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httputil.Error401Response'
         "500":
           description: Internal Server Error
           schema:
@@ -1412,6 +1531,45 @@ paths:
       security:
       - BearerAuth: []
       summary: Update table
+      tags:
+      - Tables
+  /tables/search:
+    get:
+      description: Search tables by name (case-insensitive). Optionally filter by
+        branch_id and/or status. Accessible by owner and cashier.
+      parameters:
+      - description: Search keyword (matches table name)
+        in: query
+        name: q
+        type: string
+      - description: Branch UUID to filter tables
+        in: query
+        name: branch_id
+        type: string
+      - description: 'Filter by status: available or occupied'
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/table.Table'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httputil.Error401Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error500Response'
+      security:
+      - BearerAuth: []
+      summary: Search tables
       tags:
       - Tables
 securityDefinitions:
