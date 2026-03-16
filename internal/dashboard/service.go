@@ -31,8 +31,8 @@ type BranchRev struct {
 
 // CashierDashboard contains the cashier's overview metrics.
 type CashierDashboard struct {
-	OpenOrdersCount   int     `json:"open_orders_count"`
-	OrdersHandledToday int   `json:"orders_handled_today"`
+	OpenOrdersCount     int     `json:"open_orders_count"`
+	OrdersHandledToday  int     `json:"orders_handled_today"`
 	TotalCollectedToday float64 `json:"total_collected_today"`
 }
 

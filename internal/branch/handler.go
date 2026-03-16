@@ -22,7 +22,7 @@ func NewHandler(svc *Service) *Handler { return &Handler{svc: svc} }
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Success		200	{array}		Branch
-//	@Failure		500	{object}	httputil.ErrorResponse
+//	@Failure		500	{object}	httputil.Error500Response
 //	@Router			/branches [get]
 func (h *Handler) List(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)
@@ -43,7 +43,7 @@ func (h *Handler) List(c *fiber.Ctx) error {
 //	@Security		BearerAuth
 //	@Param			body	body		CreateBranchInput	true	"Branch payload"
 //	@Success		201		{object}	Branch
-//	@Failure		400		{object}	httputil.ErrorResponse
+//	@Failure 400 {object} httputil.Error400Response
 //	@Router			/branches [post]
 func (h *Handler) Create(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)
@@ -69,7 +69,7 @@ func (h *Handler) Create(c *fiber.Ctx) error {
 //	@Param			id		path		string				true	"Branch UUID"
 //	@Param			body	body		UpdateBranchInput	true	"Update payload (all fields optional)"
 //	@Success		200		{object}	Branch
-//	@Failure		400		{object}	httputil.ErrorResponse
+//	@Failure 400 {object} httputil.Error400Response
 //	@Router			/branches/{id} [patch]
 func (h *Handler) Update(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)

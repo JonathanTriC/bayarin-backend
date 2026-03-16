@@ -21,7 +21,7 @@ func NewHandler(svc *Service) *Handler { return &Handler{svc: svc} }
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Success		200	{object}	OwnerDashboard
-//	@Failure		500	{object}	httputil.ErrorResponse
+//	@Failure		500	{object}	httputil.Error500Response
 //	@Router			/dashboard/owner [get]
 func (h *Handler) OwnerDashboard(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)
@@ -42,7 +42,7 @@ func (h *Handler) OwnerDashboard(c *fiber.Ctx) error {
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Success		200	{object}	CashierDashboard
-//	@Failure		500	{object}	httputil.ErrorResponse
+//	@Failure		500	{object}	httputil.Error500Response
 //	@Router			/dashboard/cashier [get]
 func (h *Handler) CashierDashboard(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)

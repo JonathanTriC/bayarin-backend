@@ -23,7 +23,7 @@ func NewHandler(svc *Service) *Handler { return &Handler{svc: svc} }
 //	@Security		BearerAuth
 //	@Param			status	query		string	false	"Filter by status (open, paid, cancelled)"
 //	@Success		200		{array}		Order
-//	@Failure		500		{object}	httputil.ErrorResponse
+//	@Failure 500 {object} httputil.Error500Response
 //	@Router			/orders [get]
 func (h *Handler) List(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)
@@ -44,7 +44,7 @@ func (h *Handler) List(c *fiber.Ctx) error {
 //	@Security		BearerAuth
 //	@Param			body	body		CreateOrderInput	true	"Order payload"
 //	@Success		201		{object}	Order
-//	@Failure		400		{object}	httputil.ErrorResponse
+//	@Failure 400 {object} httputil.Error400Response
 //	@Router			/orders [post]
 func (h *Handler) Create(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)
@@ -68,7 +68,7 @@ func (h *Handler) Create(c *fiber.Ctx) error {
 //	@Security		BearerAuth
 //	@Param			id	path		string	true	"Order UUID"
 //	@Success		200	{object}	Order
-//	@Failure		404	{object}	httputil.ErrorResponse
+//	@Failure		404	{object}	httputil.Error404Response
 //	@Router			/orders/{id} [get]
 func (h *Handler) GetByID(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)
@@ -94,7 +94,7 @@ func (h *Handler) GetByID(c *fiber.Ctx) error {
 //	@Param			id		path		string				true	"Order UUID"
 //	@Param			body	body		UpdateOrderInput	true	"Update payload (all fields optional)"
 //	@Success		200		{object}	Order
-//	@Failure		400		{object}	httputil.ErrorResponse
+//	@Failure 400 {object} httputil.Error400Response
 //	@Router			/orders/{id} [patch]
 func (h *Handler) Update(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)
@@ -116,15 +116,17 @@ func (h *Handler) Update(c *fiber.Ctx) error {
 // AddItem godoc
 //
 //	@Summary		Add item to order
-//	@Description	Add a menu item (with optional modifier options) to an open order. Recalculates totals.
-//	@Tags			Order Items
+//	@Description	Add a menu item to an open order with optional modifier options. Validates modifiers belong to the menu item.
+//	@Tags			orders
 //	@Accept			json
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Param			id		path		string				true	"Order UUID"
-//	@Param			body	body		AddOrderItemInput	true	"Item payload"
+//	@Param			body	body		AddOrderItemInput	true	"Order item payload"
 //	@Success		201		{object}	OrderItem
-//	@Failure		400		{object}	httputil.ErrorResponse
+//	@Failure 400 {object} httputil.Error400Response
+//	@Failure 401 {object} httputil.Error401Response
+//	@Failure 404 {object} httputil.Error404Response
 //	@Router			/orders/{id}/items [post]
 func (h *Handler) AddItem(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)
@@ -155,7 +157,7 @@ func (h *Handler) AddItem(c *fiber.Ctx) error {
 //	@Param			item_id	path		string					true	"Order item UUID"
 //	@Param			body	body		UpdateOrderItemInput	true	"Update payload (all fields optional)"
 //	@Success		200		{object}	OrderItem
-//	@Failure		400		{object}	httputil.ErrorResponse
+//	@Failure 400 {object} httputil.Error400Response
 //	@Router			/orders/{id}/items/{item_id} [patch]
 func (h *Handler) UpdateItem(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)
@@ -188,7 +190,7 @@ func (h *Handler) UpdateItem(c *fiber.Ctx) error {
 //	@Param			id		path		string	true	"Order UUID"
 //	@Param			item_id	path		string	true	"Order item UUID"
 //	@Success		200		{object}	httputil.MessageResponse
-//	@Failure		400		{object}	httputil.ErrorResponse
+//	@Failure 400 {object} httputil.Error400Response
 //	@Router			/orders/{id}/items/{item_id} [delete]
 func (h *Handler) DeleteItem(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)

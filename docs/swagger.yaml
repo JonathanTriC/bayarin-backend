@@ -137,10 +137,46 @@ definitions:
       total_sold:
         type: integer
     type: object
-  httputil.ErrorResponse:
+  httputil.Error400Response:
     properties:
       error:
-        example: something went wrong
+        example: invalid request body
+        type: string
+      success:
+        example: false
+        type: boolean
+    type: object
+  httputil.Error401Response:
+    properties:
+      error:
+        example: unauthorized
+        type: string
+      success:
+        example: false
+        type: boolean
+    type: object
+  httputil.Error403Response:
+    properties:
+      error:
+        example: forbidden accesss
+        type: string
+      success:
+        example: false
+        type: boolean
+    type: object
+  httputil.Error404Response:
+    properties:
+      error:
+        example: resource not found
+        type: string
+      success:
+        example: false
+        type: boolean
+    type: object
+  httputil.Error500Response:
+    properties:
+      error:
+        example: internal server error
         type: string
       success:
         example: false
@@ -161,12 +197,18 @@ definitions:
         type: string
       description:
         type: string
+      is_available:
+        type: boolean
+      modifier_group_ids:
+        items:
+          type: string
+        type: array
       name:
         type: string
       price:
         type: number
     type: object
-  menu.MenuItem:
+  menu.MenuItemResponse:
     properties:
       business_id:
         type: string
@@ -180,10 +222,40 @@ definitions:
         type: string
       is_available:
         type: boolean
+      modifiers:
+        items:
+          $ref: '#/definitions/menu.ModifierGroupResponse'
+        type: array
       name:
         type: string
       price:
         type: number
+    type: object
+  menu.ModifierGroupResponse:
+    properties:
+      id:
+        type: string
+      is_required:
+        type: boolean
+      max_select:
+        type: integer
+      name:
+        type: string
+      options:
+        items:
+          $ref: '#/definitions/menu.ModifierOptionResponse'
+        type: array
+    type: object
+  menu.ModifierOptionResponse:
+    properties:
+      extra_price:
+        type: number
+      group_id:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
     type: object
   menu.UpdateMenuItemInput:
     properties:
@@ -193,6 +265,10 @@ definitions:
         type: string
       is_available:
         type: boolean
+      modifier_group_ids:
+        items:
+          type: string
+        type: array
       name:
         type: string
       price:
@@ -485,7 +561,7 @@ paths:
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/httputil.ErrorResponse'
+            $ref: '#/definitions/httputil.Error401Response'
       summary: Login
       tags:
       - Auth
@@ -502,7 +578,7 @@ paths:
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/httputil.ErrorResponse'
+            $ref: '#/definitions/httputil.Error500Response'
       security:
       - BearerAuth: []
       summary: Logout
@@ -521,7 +597,7 @@ paths:
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/httputil.ErrorResponse'
+            $ref: '#/definitions/httputil.Error404Response'
       security:
       - BearerAuth: []
       summary: Get current user
@@ -549,7 +625,7 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/httputil.ErrorResponse'
+            $ref: '#/definitions/httputil.Error400Response'
       summary: Register a new business owner
       tags:
       - Auth
@@ -568,7 +644,7 @@ paths:
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/httputil.ErrorResponse'
+            $ref: '#/definitions/httputil.Error500Response'
       security:
       - BearerAuth: []
       summary: List branches
@@ -595,7 +671,7 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/httputil.ErrorResponse'
+            $ref: '#/definitions/httputil.Error400Response'
       security:
       - BearerAuth: []
       summary: Create branch
@@ -628,7 +704,7 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/httputil.ErrorResponse'
+            $ref: '#/definitions/httputil.Error400Response'
       security:
       - BearerAuth: []
       summary: Update branch
@@ -647,7 +723,7 @@ paths:
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/httputil.ErrorResponse'
+            $ref: '#/definitions/httputil.Error404Response'
       security:
       - BearerAuth: []
       summary: Get business
@@ -675,7 +751,7 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/httputil.ErrorResponse'
+            $ref: '#/definitions/httputil.Error400Response'
       security:
       - BearerAuth: []
       summary: Update business
@@ -695,7 +771,7 @@ paths:
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/httputil.ErrorResponse'
+            $ref: '#/definitions/httputil.Error500Response'
       security:
       - BearerAuth: []
       summary: Cashier dashboard
@@ -715,7 +791,7 @@ paths:
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/httputil.ErrorResponse'
+            $ref: '#/definitions/httputil.Error500Response'
       security:
       - BearerAuth: []
       summary: Owner dashboard
@@ -723,8 +799,7 @@ paths:
       - Dashboard
   /menu:
     get:
-      description: Returns all menu items for the authenticated owner's business,
-        ordered by category and name
+      description: List all menu items with nested modifier groups and options
       produces:
       - application/json
       responses:
@@ -732,21 +807,25 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/menu.MenuItem'
+              $ref: '#/definitions/menu.MenuItemResponse'
             type: array
-        "500":
-          description: Internal Server Error
+        "401":
+          description: Unauthorized
           schema:
-            $ref: '#/definitions/httputil.ErrorResponse'
+            $ref: '#/definitions/httputil.Error401Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httputil.Error403Response'
       security:
       - BearerAuth: []
       summary: List menu items
       tags:
-      - Menu
+      - menu
     post:
       consumes:
       - application/json
-      description: Create a new menu item under the authenticated owner's business
+      description: Create a new menu item and optionally link modifier groups
       parameters:
       - description: Menu item payload
         in: body
@@ -760,29 +839,36 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/menu.MenuItem'
+            $ref: '#/definitions/menu.MenuItemResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/httputil.ErrorResponse'
+            $ref: '#/definitions/httputil.Error400Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httputil.Error401Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httputil.Error403Response'
       security:
       - BearerAuth: []
       summary: Create menu item
       tags:
-      - Menu
+      - menu
   /menu/{id}:
     patch:
       consumes:
       - application/json
-      description: Partially update a menu item's name, description, price, category,
-        or availability
+      description: Update menu item fields and replace modifier group links
       parameters:
       - description: Menu item UUID
         in: path
         name: id
         required: true
         type: string
-      - description: Update payload (all fields optional)
+      - description: Update payload — modifier_group_ids replaces all existing links
         in: body
         name: body
         required: true
@@ -794,16 +880,28 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/menu.MenuItem'
+            $ref: '#/definitions/menu.MenuItemResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/httputil.ErrorResponse'
+            $ref: '#/definitions/httputil.Error400Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httputil.Error401Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httputil.Error403Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputil.Error404Response'
       security:
       - BearerAuth: []
       summary: Update menu item
       tags:
-      - Menu
+      - menu
   /modifiers:
     get:
       description: Returns all modifier groups (with their options) for the authenticated
@@ -820,7 +918,7 @@ paths:
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/httputil.ErrorResponse'
+            $ref: '#/definitions/httputil.Error500Response'
       security:
       - BearerAuth: []
       summary: List modifier groups
@@ -847,7 +945,7 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/httputil.ErrorResponse'
+            $ref: '#/definitions/httputil.Error400Response'
       security:
       - BearerAuth: []
       summary: Create modifier group
@@ -881,7 +979,7 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/httputil.ErrorResponse'
+            $ref: '#/definitions/httputil.Error400Response'
       security:
       - BearerAuth: []
       summary: Update modifier group
@@ -908,7 +1006,7 @@ paths:
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/httputil.ErrorResponse'
+            $ref: '#/definitions/httputil.Error500Response'
       security:
       - BearerAuth: []
       summary: List orders
@@ -936,7 +1034,7 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/httputil.ErrorResponse'
+            $ref: '#/definitions/httputil.Error400Response'
       security:
       - BearerAuth: []
       summary: Create order
@@ -961,7 +1059,7 @@ paths:
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/httputil.ErrorResponse'
+            $ref: '#/definitions/httputil.Error404Response'
       security:
       - BearerAuth: []
       summary: Get order by ID
@@ -994,7 +1092,7 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/httputil.ErrorResponse'
+            $ref: '#/definitions/httputil.Error400Response'
       security:
       - BearerAuth: []
       summary: Update order
@@ -1004,15 +1102,15 @@ paths:
     post:
       consumes:
       - application/json
-      description: Add a menu item (with optional modifier options) to an open order.
-        Recalculates totals.
+      description: Add a menu item to an open order with optional modifier options.
+        Validates modifiers belong to the menu item.
       parameters:
       - description: Order UUID
         in: path
         name: id
         required: true
         type: string
-      - description: Item payload
+      - description: Order item payload
         in: body
         name: body
         required: true
@@ -1028,12 +1126,20 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/httputil.ErrorResponse'
+            $ref: '#/definitions/httputil.Error400Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httputil.Error401Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputil.Error404Response'
       security:
       - BearerAuth: []
       summary: Add item to order
       tags:
-      - Order Items
+      - orders
   /orders/{id}/items/{item_id}:
     delete:
       description: Remove an item from an open order. Recalculates order totals.
@@ -1058,7 +1164,7 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/httputil.ErrorResponse'
+            $ref: '#/definitions/httputil.Error400Response'
       security:
       - BearerAuth: []
       summary: Delete order item
@@ -1096,7 +1202,7 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/httputil.ErrorResponse'
+            $ref: '#/definitions/httputil.Error400Response'
       security:
       - BearerAuth: []
       summary: Update order item
@@ -1131,7 +1237,7 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/httputil.ErrorResponse'
+            $ref: '#/definitions/httputil.Error400Response'
       security:
       - BearerAuth: []
       summary: Pay order
@@ -1152,7 +1258,7 @@ paths:
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/httputil.ErrorResponse'
+            $ref: '#/definitions/httputil.Error500Response'
       security:
       - BearerAuth: []
       summary: List staff
@@ -1180,7 +1286,7 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/httputil.ErrorResponse'
+            $ref: '#/definitions/httputil.Error400Response'
       security:
       - BearerAuth: []
       summary: Create staff (cashier)
@@ -1214,7 +1320,7 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/httputil.ErrorResponse'
+            $ref: '#/definitions/httputil.Error400Response'
       security:
       - BearerAuth: []
       summary: Update staff
@@ -1240,7 +1346,7 @@ paths:
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/httputil.ErrorResponse'
+            $ref: '#/definitions/httputil.Error500Response'
       security:
       - BearerAuth: []
       summary: List tables
@@ -1268,7 +1374,7 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/httputil.ErrorResponse'
+            $ref: '#/definitions/httputil.Error400Response'
       security:
       - BearerAuth: []
       summary: Create table
@@ -1302,7 +1408,7 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/httputil.ErrorResponse'
+            $ref: '#/definitions/httputil.Error400Response'
       security:
       - BearerAuth: []
       summary: Update table

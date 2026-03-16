@@ -253,6 +253,11 @@ type MenuItem struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+type MenuItemModifier struct {
+	MenuItemID      uuid.UUID `json:"menu_item_id"`
+	ModifierGroupID uuid.UUID `json:"modifier_group_id"`
+}
+
 type ModifierGroup struct {
 	ID         uuid.UUID `json:"id"`
 	BusinessID uuid.UUID `json:"business_id"`

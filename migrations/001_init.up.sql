@@ -169,3 +169,13 @@ CREATE TABLE transactions (
 CREATE INDEX idx_transactions_business_id ON transactions(business_id);
 CREATE INDEX idx_transactions_branch_id ON transactions(branch_id);
 CREATE INDEX idx_transactions_paid_at ON transactions(paid_at);
+
+-- menu_item_modifiers
+CREATE TABLE menu_item_modifiers (
+    menu_item_id      UUID NOT NULL REFERENCES menu_items(id) ON DELETE CASCADE,
+    modifier_group_id UUID NOT NULL REFERENCES modifier_groups(id) ON DELETE CASCADE,
+    PRIMARY KEY (menu_item_id, modifier_group_id)
+);
+
+CREATE INDEX idx_menu_item_modifiers_menu  ON menu_item_modifiers(menu_item_id);
+CREATE INDEX idx_menu_item_modifiers_group ON menu_item_modifiers(modifier_group_id);

@@ -21,7 +21,7 @@ func NewHandler(svc *Service) *Handler { return &Handler{svc: svc} }
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Success		200	{object}	Business
-//	@Failure		404	{object}	httputil.ErrorResponse
+//	@Failure		404	{object}	httputil.Error404Response
 //	@Router			/business [get]
 func (h *Handler) Get(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)
@@ -42,7 +42,7 @@ func (h *Handler) Get(c *fiber.Ctx) error {
 //	@Security		BearerAuth
 //	@Param			body	body		UpdateBusinessInput	true	"Update payload (all fields optional)"
 //	@Success		200		{object}	Business
-//	@Failure		400		{object}	httputil.ErrorResponse
+//	@Failure 400 {object} httputil.Error400Response
 //	@Router			/business [patch]
 func (h *Handler) Update(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)

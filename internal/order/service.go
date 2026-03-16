@@ -11,32 +11,32 @@ import (
 
 // Order represents an order entity.
 type Order struct {
-	ID                   uuid.UUID   `json:"id"`
-	BusinessID           uuid.UUID   `json:"business_id"`
-	BranchID             uuid.UUID   `json:"branch_id"`
-	CashierID            uuid.UUID   `json:"cashier_id"`
-	TableID              *uuid.UUID  `json:"table_id,omitempty"`
-	Type                 string      `json:"type"`
-	CustomerName         string      `json:"customer_name"`
-	Status               string      `json:"status"`
-	Subtotal             float64     `json:"subtotal"`
-	TaxAmount            float64     `json:"tax_amount"`
-	ServiceChargeAmount  float64     `json:"service_charge_amount"`
-	Total                float64     `json:"total"`
-	CreatedAt            string      `json:"created_at"`
-	Items                []OrderItem `json:"items,omitempty"`
+	ID                  uuid.UUID   `json:"id"`
+	BusinessID          uuid.UUID   `json:"business_id"`
+	BranchID            uuid.UUID   `json:"branch_id"`
+	CashierID           uuid.UUID   `json:"cashier_id"`
+	TableID             *uuid.UUID  `json:"table_id,omitempty"`
+	Type                string      `json:"type"`
+	CustomerName        string      `json:"customer_name"`
+	Status              string      `json:"status"`
+	Subtotal            float64     `json:"subtotal"`
+	TaxAmount           float64     `json:"tax_amount"`
+	ServiceChargeAmount float64     `json:"service_charge_amount"`
+	Total               float64     `json:"total"`
+	CreatedAt           string      `json:"created_at"`
+	Items               []OrderItem `json:"items,omitempty"`
 }
 
 // OrderItem represents a single line item in an order.
 type OrderItem struct {
-	ID           uuid.UUID           `json:"id"`
-	OrderID      uuid.UUID           `json:"order_id"`
-	MenuItemID   uuid.UUID           `json:"menu_item_id"`
-	Quantity     int                 `json:"quantity"`
-	UnitPrice    float64             `json:"unit_price"`
-	Notes        string              `json:"notes"`
-	Subtotal     float64             `json:"subtotal"`
-	Modifiers    []OrderItemModifier `json:"modifiers,omitempty"`
+	ID         uuid.UUID           `json:"id"`
+	OrderID    uuid.UUID           `json:"order_id"`
+	MenuItemID uuid.UUID           `json:"menu_item_id"`
+	Quantity   int                 `json:"quantity"`
+	UnitPrice  float64             `json:"unit_price"`
+	Notes      string              `json:"notes"`
+	Subtotal   float64             `json:"subtotal"`
+	Modifiers  []OrderItemModifier `json:"modifiers,omitempty"`
 }
 
 // OrderItemModifier represents a modifier applied to an order item.
@@ -288,12 +288,83 @@ func (s *Service) AddItem(businessID, orderID uuid.UUID, input AddOrderItemInput
 		return nil, errors.New("menu item not found or unavailable")
 	}
 
-	// Calculate modifier extra prices.
+	// Validate modifiers
+	// 1. Fetch linked modifier groups and options for this menu item.
+	rows, err := s.db.Query(`
+		SELECT 
+			mg.id AS group_id, mg.is_required, mg.max_select,
+			mo.id AS option_id, mo.extra_price
+		FROM menu_item_modifiers mim
+		JOIN modifier_groups mg ON mg.id = mim.modifier_group_id
+		JOIN modifier_options mo ON mo.group_id = mg.id
+		WHERE mim.menu_item_id = $1
+	`, input.MenuItemID)
+	if err != nil {
+		return nil, fmt.Errorf("fetch linked modifiers: %w", err)
+	}
+	defer rows.Close()
+
+	type groupMeta struct {
+		IsRequired bool
+		MaxSelect  int
+		Options    map[uuid.UUID]float64 // option_id -> extra_price
+	}
+	validGroups := make(map[uuid.UUID]*groupMeta)
+
+	for rows.Next() {
+		var gID, oID uuid.UUID
+		var isReq bool
+		var maxSel int
+		var ePrice float64
+		if err := rows.Scan(&gID, &isReq, &maxSel, &oID, &ePrice); err != nil {
+			return nil, err
+		}
+		if validGroups[gID] == nil {
+			validGroups[gID] = &groupMeta{
+				IsRequired: isReq,
+				MaxSelect:  maxSel,
+				Options:    make(map[uuid.UUID]float64),
+			}
+		}
+		validGroups[gID].Options[oID] = ePrice
+	}
+
+	// Group selected options by their group_id to validate counts
+	selectedByGroup := make(map[uuid.UUID]int)
 	modifierTotal := 0.0
+
 	for _, modID := range input.ModifierOptionIDs {
-		var ep float64
-		_ = s.db.QueryRow(`SELECT extra_price FROM modifier_options WHERE id = $1`, modID).Scan(&ep)
-		modifierTotal += ep
+		// Find which group this option belongs to
+		var foundGroupID uuid.UUID
+		var foundPrice float64
+		var found bool
+
+		for gID, meta := range validGroups {
+			if price, exists := meta.Options[modID]; exists {
+				foundGroupID = gID
+				foundPrice = price
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			return nil, errors.New("modifier option does not belong to this menu item")
+		}
+
+		selectedByGroup[foundGroupID]++
+		modifierTotal += foundPrice
+	}
+
+	// Validate max_select and is_required
+	for gID, meta := range validGroups {
+		count := selectedByGroup[gID]
+		if meta.IsRequired && count == 0 {
+			return nil, errors.New("missing required modifier group")
+		}
+		if count > meta.MaxSelect {
+			return nil, errors.New("exceeded maximum selection for modifier group")
+		}
 	}
 
 	effectiveUnitPrice := unitPrice + modifierTotal
@@ -313,7 +384,14 @@ func (s *Service) AddItem(businessID, orderID uuid.UUID, input AddOrderItemInput
 	// Insert modifiers.
 	for _, modID := range input.ModifierOptionIDs {
 		var ep float64
-		_ = s.db.QueryRow(`SELECT extra_price FROM modifier_options WHERE id = $1`, modID).Scan(&ep)
+		// We already know mapping exists from validGroups
+		for _, meta := range validGroups {
+			if p, ok := meta.Options[modID]; ok {
+				ep = p
+				break
+			}
+		}
+
 		var mod OrderItemModifier
 		_ = s.db.QueryRow(
 			`INSERT INTO order_item_modifiers (order_item_id, modifier_option_id, extra_price)

@@ -23,7 +23,7 @@ func NewHandler(svc *Service) *Handler { return &Handler{svc: svc} }
 //	@Security		BearerAuth
 //	@Param			branch_id	query		string	false	"Branch UUID to filter tables"
 //	@Success		200			{array}		Table
-//	@Failure		500			{object}	httputil.ErrorResponse
+//	@Failure 500 {object} httputil.Error500Response
 //	@Router			/tables [get]
 func (h *Handler) List(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)
@@ -52,7 +52,7 @@ func (h *Handler) List(c *fiber.Ctx) error {
 //	@Security		BearerAuth
 //	@Param			body	body		CreateTableInput	true	"Table payload"
 //	@Success		201		{object}	Table
-//	@Failure		400		{object}	httputil.ErrorResponse
+//	@Failure 400 {object} httputil.Error400Response
 //	@Router			/tables [post]
 func (h *Handler) Create(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)
@@ -78,7 +78,7 @@ func (h *Handler) Create(c *fiber.Ctx) error {
 //	@Param			id		path		string				true	"Table UUID"
 //	@Param			body	body		UpdateTableInput	true	"Update payload (all fields optional)"
 //	@Success		200		{object}	Table
-//	@Failure		400		{object}	httputil.ErrorResponse
+//	@Failure 400 {object} httputil.Error400Response
 //	@Router			/tables/{id} [patch]
 func (h *Handler) Update(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)

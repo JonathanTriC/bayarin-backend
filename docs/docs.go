@@ -49,7 +49,7 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponse"
+                            "$ref": "#/definitions/httputil.Error401Response"
                         }
                     }
                 }
@@ -80,7 +80,7 @@ const docTemplate = `{
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponse"
+                            "$ref": "#/definitions/httputil.Error500Response"
                         }
                     }
                 }
@@ -111,7 +111,7 @@ const docTemplate = `{
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponse"
+                            "$ref": "#/definitions/httputil.Error404Response"
                         }
                     }
                 }
@@ -151,7 +151,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponse"
+                            "$ref": "#/definitions/httputil.Error400Response"
                         }
                     }
                 }
@@ -185,7 +185,7 @@ const docTemplate = `{
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponse"
+                            "$ref": "#/definitions/httputil.Error500Response"
                         }
                     }
                 }
@@ -228,7 +228,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponse"
+                            "$ref": "#/definitions/httputil.Error400Response"
                         }
                     }
                 }
@@ -280,7 +280,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponse"
+                            "$ref": "#/definitions/httputil.Error400Response"
                         }
                     }
                 }
@@ -311,7 +311,7 @@ const docTemplate = `{
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponse"
+                            "$ref": "#/definitions/httputil.Error404Response"
                         }
                     }
                 }
@@ -354,7 +354,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponse"
+                            "$ref": "#/definitions/httputil.Error400Response"
                         }
                     }
                 }
@@ -385,7 +385,7 @@ const docTemplate = `{
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponse"
+                            "$ref": "#/definitions/httputil.Error500Response"
                         }
                     }
                 }
@@ -416,7 +416,7 @@ const docTemplate = `{
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponse"
+                            "$ref": "#/definitions/httputil.Error500Response"
                         }
                     }
                 }
@@ -429,12 +429,12 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns all menu items for the authenticated owner's business, ordered by category and name",
+                "description": "List all menu items with nested modifier groups and options",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "Menu"
+                    "menu"
                 ],
                 "summary": "List menu items",
                 "responses": {
@@ -443,14 +443,20 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/menu.MenuItem"
+                                "$ref": "#/definitions/menu.MenuItemResponse"
                             }
                         }
                     },
-                    "500": {
-                        "description": "Internal Server Error",
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponse"
+                            "$ref": "#/definitions/httputil.Error401Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error403Response"
                         }
                     }
                 }
@@ -461,7 +467,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Create a new menu item under the authenticated owner's business",
+                "description": "Create a new menu item and optionally link modifier groups",
                 "consumes": [
                     "application/json"
                 ],
@@ -469,7 +475,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Menu"
+                    "menu"
                 ],
                 "summary": "Create menu item",
                 "parameters": [
@@ -487,13 +493,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/menu.MenuItem"
+                            "$ref": "#/definitions/menu.MenuItemResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponse"
+                            "$ref": "#/definitions/httputil.Error400Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error401Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error403Response"
                         }
                     }
                 }
@@ -506,7 +524,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Partially update a menu item's name, description, price, category, or availability",
+                "description": "Update menu item fields and replace modifier group links",
                 "consumes": [
                     "application/json"
                 ],
@@ -514,7 +532,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Menu"
+                    "menu"
                 ],
                 "summary": "Update menu item",
                 "parameters": [
@@ -526,7 +544,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Update payload (all fields optional)",
+                        "description": "Update payload — modifier_group_ids replaces all existing links",
                         "name": "body",
                         "in": "body",
                         "required": true,
@@ -539,13 +557,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/menu.MenuItem"
+                            "$ref": "#/definitions/menu.MenuItemResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponse"
+                            "$ref": "#/definitions/httputil.Error400Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error401Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error403Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error404Response"
                         }
                     }
                 }
@@ -579,7 +615,7 @@ const docTemplate = `{
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponse"
+                            "$ref": "#/definitions/httputil.Error500Response"
                         }
                     }
                 }
@@ -622,7 +658,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponse"
+                            "$ref": "#/definitions/httputil.Error400Response"
                         }
                     }
                 }
@@ -674,7 +710,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponse"
+                            "$ref": "#/definitions/httputil.Error400Response"
                         }
                     }
                 }
@@ -716,7 +752,7 @@ const docTemplate = `{
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponse"
+                            "$ref": "#/definitions/httputil.Error500Response"
                         }
                     }
                 }
@@ -759,7 +795,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponse"
+                            "$ref": "#/definitions/httputil.Error400Response"
                         }
                     }
                 }
@@ -799,7 +835,7 @@ const docTemplate = `{
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponse"
+                            "$ref": "#/definitions/httputil.Error404Response"
                         }
                     }
                 }
@@ -849,7 +885,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponse"
+                            "$ref": "#/definitions/httputil.Error400Response"
                         }
                     }
                 }
@@ -862,7 +898,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Add a menu item (with optional modifier options) to an open order. Recalculates totals.",
+                "description": "Add a menu item to an open order with optional modifier options. Validates modifiers belong to the menu item.",
                 "consumes": [
                     "application/json"
                 ],
@@ -870,7 +906,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Order Items"
+                    "orders"
                 ],
                 "summary": "Add item to order",
                 "parameters": [
@@ -882,7 +918,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Item payload",
+                        "description": "Order item payload",
                         "name": "body",
                         "in": "body",
                         "required": true,
@@ -901,7 +937,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponse"
+                            "$ref": "#/definitions/httputil.Error400Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error401Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error404Response"
                         }
                     }
                 }
@@ -948,7 +996,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponse"
+                            "$ref": "#/definitions/httputil.Error400Response"
                         }
                     }
                 }
@@ -1005,7 +1053,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponse"
+                            "$ref": "#/definitions/httputil.Error400Response"
                         }
                     }
                 }
@@ -1057,7 +1105,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponse"
+                            "$ref": "#/definitions/httputil.Error400Response"
                         }
                     }
                 }
@@ -1091,7 +1139,7 @@ const docTemplate = `{
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponse"
+                            "$ref": "#/definitions/httputil.Error500Response"
                         }
                     }
                 }
@@ -1134,7 +1182,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponse"
+                            "$ref": "#/definitions/httputil.Error400Response"
                         }
                     }
                 }
@@ -1186,7 +1234,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponse"
+                            "$ref": "#/definitions/httputil.Error400Response"
                         }
                     }
                 }
@@ -1228,7 +1276,7 @@ const docTemplate = `{
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponse"
+                            "$ref": "#/definitions/httputil.Error500Response"
                         }
                     }
                 }
@@ -1271,7 +1319,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponse"
+                            "$ref": "#/definitions/httputil.Error400Response"
                         }
                     }
                 }
@@ -1323,7 +1371,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httputil.ErrorResponse"
+                            "$ref": "#/definitions/httputil.Error400Response"
                         }
                     }
                 }
@@ -1543,12 +1591,64 @@ const docTemplate = `{
                 }
             }
         },
-        "httputil.ErrorResponse": {
+        "httputil.Error400Response": {
             "type": "object",
             "properties": {
                 "error": {
                     "type": "string",
-                    "example": "something went wrong"
+                    "example": "invalid request body"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": false
+                }
+            }
+        },
+        "httputil.Error401Response": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "unauthorized"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": false
+                }
+            }
+        },
+        "httputil.Error403Response": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "forbidden accesss"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": false
+                }
+            }
+        },
+        "httputil.Error404Response": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "resource not found"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": false
+                }
+            }
+        },
+        "httputil.Error500Response": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "internal server error"
                 },
                 "success": {
                     "type": "boolean",
@@ -1578,6 +1678,15 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
+                "is_available": {
+                    "type": "boolean"
+                },
+                "modifier_group_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "name": {
                     "type": "string"
                 },
@@ -1586,7 +1695,7 @@ const docTemplate = `{
                 }
             }
         },
-        "menu.MenuItem": {
+        "menu.MenuItemResponse": {
             "type": "object",
             "properties": {
                 "business_id": {
@@ -1607,11 +1716,57 @@ const docTemplate = `{
                 "is_available": {
                     "type": "boolean"
                 },
+                "modifiers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/menu.ModifierGroupResponse"
+                    }
+                },
                 "name": {
                     "type": "string"
                 },
                 "price": {
                     "type": "number"
+                }
+            }
+        },
+        "menu.ModifierGroupResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "is_required": {
+                    "type": "boolean"
+                },
+                "max_select": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "options": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/menu.ModifierOptionResponse"
+                    }
+                }
+            }
+        },
+        "menu.ModifierOptionResponse": {
+            "type": "object",
+            "properties": {
+                "extra_price": {
+                    "type": "number"
+                },
+                "group_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },
@@ -1626,6 +1781,12 @@ const docTemplate = `{
                 },
                 "is_available": {
                     "type": "boolean"
+                },
+                "modifier_group_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "name": {
                     "type": "string"

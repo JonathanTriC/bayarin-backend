@@ -10,12 +10,12 @@ import (
 
 // Business represents the business entity.
 type Business struct {
-	ID                    uuid.UUID `json:"id"`
-	Name                  string    `json:"name"`
-	Slug                  string    `json:"slug"`
-	TaxPercent            float64   `json:"tax_percent"`
-	ServiceChargePercent  float64   `json:"service_charge_percent"`
-	CreatedAt             string    `json:"created_at"`
+	ID                   uuid.UUID `json:"id"`
+	Name                 string    `json:"name"`
+	Slug                 string    `json:"slug"`
+	TaxPercent           float64   `json:"tax_percent"`
+	ServiceChargePercent float64   `json:"service_charge_percent"`
+	CreatedAt            string    `json:"created_at"`
 }
 
 // UpdateBusinessInput holds fields that can be updated.

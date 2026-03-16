@@ -22,7 +22,7 @@ func NewHandler(svc *Service) *Handler { return &Handler{svc: svc} }
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Success		200	{array}		ModifierGroup
-//	@Failure		500	{object}	httputil.ErrorResponse
+//	@Failure		500	{object}	httputil.Error500Response
 //	@Router			/modifiers [get]
 func (h *Handler) List(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)
@@ -43,7 +43,7 @@ func (h *Handler) List(c *fiber.Ctx) error {
 //	@Security		BearerAuth
 //	@Param			body	body		CreateModifierGroupInput	true	"Modifier group payload"
 //	@Success		201		{object}	ModifierGroup
-//	@Failure		400		{object}	httputil.ErrorResponse
+//	@Failure 400 {object} httputil.Error400Response
 //	@Router			/modifiers [post]
 func (h *Handler) Create(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)
@@ -69,7 +69,7 @@ func (h *Handler) Create(c *fiber.Ctx) error {
 //	@Param			id		path		string						true	"Modifier group UUID"
 //	@Param			body	body		UpdateModifierGroupInput	true	"Update payload (all fields optional)"
 //	@Success		200		{object}	ModifierGroup
-//	@Failure		400		{object}	httputil.ErrorResponse
+//	@Failure 400 {object} httputil.Error400Response
 //	@Router			/modifiers/{id} [patch]
 func (h *Handler) Update(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)

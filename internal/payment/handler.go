@@ -25,7 +25,7 @@ func NewHandler(svc *Service) *Handler { return &Handler{svc: svc} }
 //	@Param			id		path		string			true	"Order UUID"
 //	@Param			body	body		PayOrderInput	true	"Payment payload"
 //	@Success		201		{object}	Payment
-//	@Failure		400		{object}	httputil.ErrorResponse
+//	@Failure 400 {object} httputil.Error400Response
 //	@Router			/orders/{id}/pay [post]
 func (h *Handler) Pay(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)

@@ -26,7 +26,7 @@ func NewHandler(svc *Service) *Handler {
 //	@Produce		json
 //	@Param			body	body		RegisterOwnerInput				true	"Registration payload"
 //	@Success		201		{object}	UserResponse
-//	@Failure		400		{object}	httputil.ErrorResponse
+//	@Failure 400 {object} httputil.Error400Response
 //	@Router			/auth/register-owner [post]
 func (h *Handler) RegisterOwner(c *fiber.Ctx) error {
 	var input RegisterOwnerInput
@@ -57,7 +57,7 @@ func (h *Handler) RegisterOwner(c *fiber.Ctx) error {
 //	@Produce		json
 //	@Param			body	body		LoginInput				true	"Login payload"
 //	@Success		200		{object}	LoginResponse
-//	@Failure		401		{object}	httputil.ErrorResponse
+//	@Failure 401 {object} httputil.Error401Response
 //	@Router			/auth/login [post]
 func (h *Handler) Login(c *fiber.Ctx) error {
 	var input LoginInput
@@ -85,7 +85,7 @@ func (h *Handler) Login(c *fiber.Ctx) error {
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Success		200	{object}	httputil.MessageResponse
-//	@Failure		500	{object}	httputil.ErrorResponse
+//	@Failure		500	{object}	httputil.Error500Response
 //	@Router			/auth/logout [post]
 func (h *Handler) Logout(c *fiber.Ctx) error {
 	authHeader := c.Get("Authorization")
@@ -106,7 +106,7 @@ func (h *Handler) Logout(c *fiber.Ctx) error {
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Success		200	{object}	UserResponse
-//	@Failure		404	{object}	httputil.ErrorResponse
+//	@Failure		404	{object}	httputil.Error404Response
 //	@Router			/auth/me [get]
 func (h *Handler) Me(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)

@@ -17,12 +17,13 @@ func NewHandler(svc *Service) *Handler { return &Handler{svc: svc} }
 // List godoc
 //
 //	@Summary		List menu items
-//	@Description	Returns all menu items for the authenticated owner's business, ordered by category and name
-//	@Tags			Menu
+//	@Description	List all menu items with nested modifier groups and options
+//	@Tags			menu
 //	@Produce		json
 //	@Security		BearerAuth
-//	@Success		200	{array}		MenuItem
-//	@Failure		500	{object}	httputil.ErrorResponse
+//	@Success		200	{array}		MenuItemResponse
+//	@Failure		401	{object}	httputil.Error401Response
+//	@Failure		403	{object}	httputil.Error403Response
 //	@Router			/menu [get]
 func (h *Handler) List(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)
@@ -36,14 +37,16 @@ func (h *Handler) List(c *fiber.Ctx) error {
 // Create godoc
 //
 //	@Summary		Create menu item
-//	@Description	Create a new menu item under the authenticated owner's business
-//	@Tags			Menu
+//	@Description	Create a new menu item and optionally link modifier groups
+//	@Tags			menu
 //	@Accept			json
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Param			body	body		CreateMenuItemInput	true	"Menu item payload"
-//	@Success		201		{object}	MenuItem
-//	@Failure		400		{object}	httputil.ErrorResponse
+//	@Success		201		{object}	MenuItemResponse
+//	@Failure 400 {object} httputil.Error400Response
+//	@Failure 401 {object} httputil.Error401Response
+//	@Failure 403 {object} httputil.Error403Response
 //	@Router			/menu [post]
 func (h *Handler) Create(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)
@@ -61,15 +64,18 @@ func (h *Handler) Create(c *fiber.Ctx) error {
 // Update godoc
 //
 //	@Summary		Update menu item
-//	@Description	Partially update a menu item's name, description, price, category, or availability
-//	@Tags			Menu
+//	@Description	Update menu item fields and replace modifier group links
+//	@Tags			menu
 //	@Accept			json
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Param			id		path		string					true	"Menu item UUID"
-//	@Param			body	body		UpdateMenuItemInput		true	"Update payload (all fields optional)"
-//	@Success		200		{object}	MenuItem
-//	@Failure		400		{object}	httputil.ErrorResponse
+//	@Param			body	body		UpdateMenuItemInput		true	"Update payload — modifier_group_ids replaces all existing links"
+//	@Success		200		{object}	MenuItemResponse
+//	@Failure 400 {object} httputil.Error400Response
+//	@Failure 401 {object} httputil.Error401Response
+//	@Failure 403 {object} httputil.Error403Response
+//	@Failure 404 {object} httputil.Error404Response
 //	@Router			/menu/{id} [patch]
 func (h *Handler) Update(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)
