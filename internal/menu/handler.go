@@ -34,6 +34,26 @@ func (h *Handler) List(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"success": true, "data": items})
 }
 
+// Categories godoc
+//
+//	@Summary		List menu categories
+//	@Description	Returns the distinct list of category values currently in use. Automatically reflects new categories when menu items are added. Accessible by owner and cashier.
+//	@Tags			menu
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{array}		string
+//	@Failure		401	{object}	httputil.Error401Response
+//	@Failure		500	{object}	httputil.Error500Response
+//	@Router			/menu/categories [get]
+func (h *Handler) Categories(c *fiber.Ctx) error {
+	auth := c.Locals("auth").(middleware.AuthContext)
+	cats, err := h.svc.Categories(auth.BusinessID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"success": false, "error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"success": true, "data": cats})
+}
+
 // Search godoc
 //
 //	@Summary		Search menu items

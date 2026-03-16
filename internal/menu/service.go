@@ -348,3 +348,29 @@ func (s *Service) Search(businessID uuid.UUID, query, category string) ([]MenuIt
 	}
 	return items, nil
 }
+
+// Categories returns the distinct list of categories in use for the given business.
+// The list is always live — a new menu item with a new category appears here automatically.
+func (s *Service) Categories(businessID uuid.UUID) ([]string, error) {
+	rows, err := s.db.Query(
+		`SELECT DISTINCT category FROM menu_items
+		 WHERE business_id = $1 AND category <> ''
+		 ORDER BY category`, businessID)
+	if err != nil {
+		return nil, fmt.Errorf("list categories: %w", err)
+	}
+	defer rows.Close()
+
+	var categories []string
+	for rows.Next() {
+		var c string
+		if err := rows.Scan(&c); err != nil {
+			return nil, err
+		}
+		categories = append(categories, c)
+	}
+	if categories == nil {
+		categories = []string{}
+	}
+	return categories, nil
+}

@@ -131,8 +131,9 @@ func main() {
 	staffRoute.Patch("/:id", staffHdlr.Update)
 
 	// ── MENU ──
-	api.Get("/menu/search", authMW, middleware.RequireCashierOrOwner(), menuHdlr.Search) // cashier + owner
-	api.Get("/menu", authMW, middleware.RequireCashierOrOwner(), menuHdlr.List)          // cashier + owner
+	api.Get("/menu/search", authMW, middleware.RequireCashierOrOwner(), menuHdlr.Search)        // cashier + owner
+	api.Get("/menu/categories", authMW, middleware.RequireCashierOrOwner(), menuHdlr.Categories) // cashier + owner
+	api.Get("/menu", authMW, middleware.RequireCashierOrOwner(), menuHdlr.List)                  // cashier + owner
 	menuRoute := api.Group("/menu", authMW, middleware.RequireOwner())
 	menuRoute.Post("/", menuHdlr.Create)
 	menuRoute.Patch("/:id", menuHdlr.Update)
