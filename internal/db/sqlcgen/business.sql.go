@@ -12,7 +12,7 @@ import (
 )
 
 const getBusiness = `-- name: GetBusiness :one
-SELECT id, name, slug, tax_percent, service_charge_percent, created_at
+SELECT id, name, slug, tax_percent, service_charge_percent, created_at, image_url
 FROM businesses
 WHERE id = $1
 LIMIT 1
@@ -28,6 +28,7 @@ func (q *Queries) GetBusiness(ctx context.Context, id uuid.UUID) (Business, erro
 		&i.TaxPercent,
 		&i.ServiceChargePercent,
 		&i.CreatedAt,
+		&i.ImageUrl,
 	)
 	return i, err
 }
@@ -39,7 +40,7 @@ SET
     tax_percent            = COALESCE($3, tax_percent),
     service_charge_percent = COALESCE($4, service_charge_percent)
 WHERE id = $1
-RETURNING id, name, slug, tax_percent, service_charge_percent, created_at
+RETURNING id, name, slug, tax_percent, service_charge_percent, created_at, image_url
 `
 
 type UpdateBusinessParams struct {
@@ -64,6 +65,7 @@ func (q *Queries) UpdateBusiness(ctx context.Context, arg UpdateBusinessParams) 
 		&i.TaxPercent,
 		&i.ServiceChargePercent,
 		&i.CreatedAt,
+		&i.ImageUrl,
 	)
 	return i, err
 }

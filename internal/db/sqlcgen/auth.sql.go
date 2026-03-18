@@ -15,7 +15,7 @@ import (
 const createBusiness = `-- name: CreateBusiness :one
 INSERT INTO businesses (name, slug, tax_percent, service_charge_percent)
 VALUES ($1, $2, $3, $4)
-RETURNING id, name, slug, tax_percent, service_charge_percent, created_at
+RETURNING id, name, slug, tax_percent, service_charge_percent, created_at, image_url
 `
 
 type CreateBusinessParams struct {
@@ -40,6 +40,7 @@ func (q *Queries) CreateBusiness(ctx context.Context, arg CreateBusinessParams) 
 		&i.TaxPercent,
 		&i.ServiceChargePercent,
 		&i.CreatedAt,
+		&i.ImageUrl,
 	)
 	return i, err
 }

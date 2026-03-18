@@ -1391,6 +1391,90 @@ paths:
       summary: Pay order
       tags:
       - Payment
+  /orders/{id}/receipt:
+    get:
+      description: Returns full receipt data for a paid order as JSON
+      parameters:
+      - description: Order UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Receipt data
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Order not paid yet
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Order not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get receipt data
+      tags:
+      - receipt
+  /orders/{id}/receipt/escpos:
+    get:
+      description: Returns raw ESC/POS byte stream for direct thermal printer sending
+      parameters:
+      - description: Order UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: Raw ESC/POS bytes
+          schema:
+            type: file
+        "404":
+          description: Order not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get ESC/POS receipt bytes
+      tags:
+      - receipt
+  /orders/{id}/receipt/pdf:
+    get:
+      description: Generates and returns a PDF receipt for a paid order
+      parameters:
+      - description: Order UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/pdf
+      responses:
+        "200":
+          description: PDF receipt file
+          schema:
+            type: file
+        "404":
+          description: Order not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Download receipt PDF
+      tags:
+      - receipt
   /orders/search:
     get:
       description: Search orders by customer name (case-insensitive). Optionally filter

@@ -245,12 +245,13 @@ type BranchQri struct {
 }
 
 type Business struct {
-	ID                   uuid.UUID `json:"id"`
-	Name                 string    `json:"name"`
-	Slug                 string    `json:"slug"`
-	TaxPercent           string    `json:"tax_percent"`
-	ServiceChargePercent string    `json:"service_charge_percent"`
-	CreatedAt            time.Time `json:"created_at"`
+	ID                   uuid.UUID      `json:"id"`
+	Name                 string         `json:"name"`
+	Slug                 string         `json:"slug"`
+	TaxPercent           string         `json:"tax_percent"`
+	ServiceChargePercent string         `json:"service_charge_percent"`
+	CreatedAt            time.Time      `json:"created_at"`
+	ImageUrl             sql.NullString `json:"image_url"`
 }
 
 type MenuItem struct {

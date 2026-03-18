@@ -16,6 +16,7 @@ import (
 	"github.com/bayarin/backend/internal/order"
 	"github.com/bayarin/backend/internal/payment"
 	"github.com/bayarin/backend/internal/qris"
+	"github.com/bayarin/backend/internal/receipt"
 	"github.com/bayarin/backend/internal/staff"
 	"github.com/bayarin/backend/internal/table"
 	_ "github.com/bayarin/backend/docs"
@@ -58,6 +59,7 @@ func main() {
 	paymentSvc := payment.NewService(db)
 	dashboardSvc := dashboard.NewService(db)
 	qrisSvc := qris.NewService(db, &config.App)
+	receiptSvc := receipt.NewService(db)
 
 	// Initialise handlers.
 	authHdlr := auth.NewHandler(authSvc)
@@ -71,6 +73,7 @@ func main() {
 	paymentHdlr := payment.NewHandler(paymentSvc)
 	dashboardHdlr := dashboard.NewHandler(dashboardSvc)
 	qrisHdlr := qris.NewHandler(qrisSvc)
+	receiptHdlr := receipt.NewHandler(receiptSvc)
 
 	// Create Fiber app.
 	app := fiber.New(fiber.Config{
@@ -168,6 +171,11 @@ func main() {
 	orderRoute.Post("/:id/items", orderHdlr.AddItem)
 	orderRoute.Patch("/:id/items/:item_id", orderHdlr.UpdateItem)
 	orderRoute.Delete("/:id/items/:item_id", orderHdlr.DeleteItem)
+
+	// ── RECEIPT ──
+	orderRoute.Get("/:id/receipt", receiptHdlr.GetReceiptData)
+	orderRoute.Get("/:id/receipt/pdf", receiptHdlr.DownloadPDF)
+	orderRoute.Get("/:id/receipt/escpos", receiptHdlr.DownloadESCPOS)
 
 	// ── PAYMENT [auth + cashier or owner] ──
 	orderRoute.Post("/:id/pay", paymentHdlr.Pay)
