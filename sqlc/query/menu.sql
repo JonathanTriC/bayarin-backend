@@ -4,6 +4,16 @@ FROM menu_items
 WHERE business_id = $1
 ORDER BY category ASC, name ASC;
 
+-- name: ListMenuItemsPaginated :many
+SELECT * FROM menu_items
+WHERE business_id = $1
+ORDER BY category, name ASC
+LIMIT $2 OFFSET $3;
+
+-- name: CountMenuItems :one
+SELECT COUNT(*) FROM menu_items
+WHERE business_id = $1;
+
 -- name: GetMenuItemByID :one
 SELECT *
 FROM menu_items

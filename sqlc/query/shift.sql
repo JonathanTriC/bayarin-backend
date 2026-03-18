@@ -29,21 +29,31 @@ SELECT * FROM shifts
 WHERE id = $1 AND business_id = $2
 LIMIT 1;
 
--- name: ListShiftsByCashier :many
+-- name: ListShiftsByCashierPaginated :many
 SELECT * FROM shifts
 WHERE cashier_id = $1
   AND business_id = $2
 ORDER BY started_at DESC
-LIMIT 50;
+LIMIT $3 OFFSET $4;
 
--- name: ListShiftsByBranch :many
+-- name: CountShiftsByCashier :one
+SELECT COUNT(*) FROM shifts
+WHERE cashier_id = $1
+  AND business_id = $2;
+
+-- name: ListShiftsByBranchPaginated :many
 SELECT s.*, u.name as cashier_name
 FROM shifts s
 JOIN users u ON u.id = s.cashier_id
 WHERE s.branch_id = $1
   AND s.business_id = $2
 ORDER BY s.started_at DESC
-LIMIT 100;
+LIMIT $3 OFFSET $4;
+
+-- name: CountShiftsByBranch :one
+SELECT COUNT(*) FROM shifts
+WHERE branch_id = $1
+  AND business_id = $2;
 
 -- name: GetShiftOrderStats :one
 -- Aggregate orders within shift time range for a cashier

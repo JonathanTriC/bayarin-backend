@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/bayarin/backend/internal/middleware"
+	"github.com/bayarin/backend/internal/pagination"
 	"github.com/google/uuid"
 )
 
@@ -85,53 +86,78 @@ type Service struct {
 // NewService creates a new order service.
 func NewService(db *sql.DB) *Service { return &Service{db: db} }
 
-// List returns orders for the business, optionally filtered by status.
-func (s *Service) List(auth middleware.AuthContext, statusFilter string) ([]Order, error) {
-	query := `SELECT id, order_number, business_id, branch_id, cashier_id, table_id, type, customer_name,
-	                 status, subtotal, tax_amount, service_charge_amount, total, created_at
-	          FROM orders WHERE business_id = $1`
-	args := []interface{}{auth.BusinessID}
+// List returns orders for the business, optionally filtered by status and paginated natively.
+func (s *Service) List(ctx context.Context, auth middleware.AuthContext, statusFilter string, p pagination.Params) ([]Order, int, error) {
+	q := sqlcgen.New(s.db)
+
+	var total int64
+	var rows []sqlcgen.Order
+	var err error
 
 	if auth.Role == "cashier" && auth.BranchID != nil {
-		query += " AND branch_id = $2"
-		args = append(args, *auth.BranchID)
-		if statusFilter != "" {
-			query += " AND status = $3"
-			args = append(args, statusFilter)
+		total, err = q.CountOrdersByBranch(ctx, sqlcgen.CountOrdersByBranchParams{
+			BusinessID: auth.BusinessID,
+			BranchID:   *auth.BranchID,
+			Column3:    statusFilter,
+		})
+		if err != nil {
+			return nil, 0, fmt.Errorf("count orders branch: %w", err)
 		}
-	} else {
-		if statusFilter != "" {
-			query += " AND status = $2"
-			args = append(args, statusFilter)
-		}
-	}
-	query += " ORDER BY created_at DESC"
 
-	rows, err := s.db.Query(query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("list orders: %w", err)
+		rows, err = q.ListOrdersByBranchPaginated(ctx, sqlcgen.ListOrdersByBranchPaginatedParams{
+			BusinessID: auth.BusinessID,
+			BranchID:   *auth.BranchID,
+			Column3:    statusFilter,
+			Limit:      int32(p.Limit),
+			Offset:     int32(p.Offset),
+		})
+	} else {
+		total, err = q.CountOrders(ctx, sqlcgen.CountOrdersParams{
+			BusinessID: auth.BusinessID,
+			Column2:    statusFilter,
+		})
+		if err != nil {
+			return nil, 0, fmt.Errorf("count orders: %w", err)
+		}
+
+		rows, err = q.ListOrdersPaginated(ctx, sqlcgen.ListOrdersPaginatedParams{
+			BusinessID: auth.BusinessID,
+			Column2:    statusFilter,
+			Limit:      int32(p.Limit),
+			Offset:     int32(p.Offset),
+		})
 	}
-	defer rows.Close()
+	if err != nil {
+		return nil, 0, fmt.Errorf("list orders: %w", err)
+	}
 
 	var orders []Order
-	for rows.Next() {
-		var o Order
-		var tableID sql.NullString
-		if err := rows.Scan(&o.ID, &o.OrderNumber, &o.BusinessID, &o.BranchID, &o.CashierID, &tableID,
-			&o.Type, &o.CustomerName, &o.Status, &o.Subtotal, &o.TaxAmount,
-			&o.ServiceChargeAmount, &o.Total, &o.CreatedAt); err != nil {
-			return nil, err
+	for _, r := range rows {
+		o := Order{
+			ID:                  r.ID,
+			OrderNumber:         r.OrderNumber,
+			BusinessID:          r.BusinessID,
+			BranchID:            r.BranchID,
+			CashierID:           r.CashierID,
+			Type:                r.Type,
+			CustomerName:        r.CustomerName,
+			Status:              r.Status,
+			Subtotal:            r.Subtotal,
+			TaxAmount:           r.TaxAmount,
+			ServiceChargeAmount: r.ServiceChargeAmount,
+			Total:               r.Total,
+			CreatedAt:           r.CreatedAt,
 		}
-		if tableID.Valid {
-			parsed, _ := uuid.Parse(tableID.String)
-			o.TableID = &parsed
+		if r.TableID.Valid {
+			tid, _ := uuid.Parse(r.TableID.String)
+			o.TableID = &tid
 		}
 		orders = append(orders, o)
 	}
 	if orders == nil {
 		orders = []Order{}
 	}
-	return orders, nil
+	return orders, int(total), nil
 }
 
 // Create inserts a new order.

@@ -12,6 +12,18 @@ import (
 	"github.com/google/uuid"
 )
 
+const countMenuItems = `-- name: CountMenuItems :one
+SELECT COUNT(*) FROM menu_items
+WHERE business_id = $1
+`
+
+func (q *Queries) CountMenuItems(ctx context.Context, businessID uuid.UUID) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countMenuItems, businessID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createMenuItem = `-- name: CreateMenuItem :one
 INSERT INTO menu_items (business_id, name, description, price, category, is_available)
 VALUES ($1, $2, $3, $4, $5, $6)
@@ -90,6 +102,52 @@ ORDER BY category ASC, name ASC
 
 func (q *Queries) ListMenuItems(ctx context.Context, businessID uuid.UUID) ([]MenuItem, error) {
 	rows, err := q.db.QueryContext(ctx, listMenuItems, businessID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []MenuItem{}
+	for rows.Next() {
+		var i MenuItem
+		if err := rows.Scan(
+			&i.ID,
+			&i.BusinessID,
+			&i.Name,
+			&i.Description,
+			&i.Price,
+			&i.Category,
+			&i.IsAvailable,
+			&i.ImageUrl,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listMenuItemsPaginated = `-- name: ListMenuItemsPaginated :many
+SELECT id, business_id, name, description, price, category, is_available, image_url, created_at FROM menu_items
+WHERE business_id = $1
+ORDER BY category, name ASC
+LIMIT $2 OFFSET $3
+`
+
+type ListMenuItemsPaginatedParams struct {
+	BusinessID uuid.UUID `json:"business_id"`
+	Limit      int32     `json:"limit"`
+	Offset     int32     `json:"offset"`
+}
+
+func (q *Queries) ListMenuItemsPaginated(ctx context.Context, arg ListMenuItemsPaginatedParams) ([]MenuItem, error) {
+	rows, err := q.db.QueryContext(ctx, listMenuItemsPaginated, arg.BusinessID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

@@ -32,20 +32,31 @@ WHERE id          = $1
 LIMIT 1
 FOR UPDATE;
 
--- name: ListOrdersByStatus :many
-SELECT *
-FROM orders
+-- name: ListOrdersPaginated :many
+SELECT * FROM orders
 WHERE business_id = $1
-  AND status      = $2
-ORDER BY created_at DESC;
+  AND ($2::text = '' OR status::text = $2)
+ORDER BY created_at DESC
+LIMIT $3 OFFSET $4;
 
--- name: ListOrdersByStatusAndBranch :many
-SELECT *
-FROM orders
+-- name: ListOrdersByBranchPaginated :many
+SELECT * FROM orders
 WHERE business_id = $1
-  AND branch_id   = $2
-  AND status      = $3
-ORDER BY created_at DESC;
+  AND branch_id = $2
+  AND ($3::text = '' OR status::text = $3)
+ORDER BY created_at DESC
+LIMIT $4 OFFSET $5;
+
+-- name: CountOrders :one
+SELECT COUNT(*) FROM orders
+WHERE business_id = $1
+  AND ($2::text = '' OR status::text = $2);
+
+-- name: CountOrdersByBranch :one
+SELECT COUNT(*) FROM orders
+WHERE business_id = $1
+  AND branch_id = $2
+  AND ($3::text = '' OR status::text = $3);
 
 -- name: UpdateOrderStatus :one
 UPDATE orders

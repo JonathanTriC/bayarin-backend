@@ -4,6 +4,16 @@ FROM modifier_groups
 WHERE business_id = $1
 ORDER BY name ASC;
 
+-- name: ListModifierGroupsPaginated :many
+SELECT * FROM modifier_groups
+WHERE business_id = $1
+ORDER BY name ASC
+LIMIT $2 OFFSET $3;
+
+-- name: CountModifierGroups :one
+SELECT COUNT(*) FROM modifier_groups
+WHERE business_id = $1;
+
 -- name: GetModifierGroupByID :one
 SELECT *
 FROM modifier_groups

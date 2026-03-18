@@ -68,6 +68,42 @@ func (q *Queries) CloseShift(ctx context.Context, arg CloseShiftParams) (Shift, 
 	return i, err
 }
 
+const countShiftsByBranch = `-- name: CountShiftsByBranch :one
+SELECT COUNT(*) FROM shifts
+WHERE branch_id = $1
+  AND business_id = $2
+`
+
+type CountShiftsByBranchParams struct {
+	BranchID   uuid.UUID `json:"branch_id"`
+	BusinessID uuid.UUID `json:"business_id"`
+}
+
+func (q *Queries) CountShiftsByBranch(ctx context.Context, arg CountShiftsByBranchParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countShiftsByBranch, arg.BranchID, arg.BusinessID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countShiftsByCashier = `-- name: CountShiftsByCashier :one
+SELECT COUNT(*) FROM shifts
+WHERE cashier_id = $1
+  AND business_id = $2
+`
+
+type CountShiftsByCashierParams struct {
+	CashierID  uuid.UUID `json:"cashier_id"`
+	BusinessID uuid.UUID `json:"business_id"`
+}
+
+func (q *Queries) CountShiftsByCashier(ctx context.Context, arg CountShiftsByCashierParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countShiftsByCashier, arg.CashierID, arg.BusinessID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const getBranchShiftOrderStats = `-- name: GetBranchShiftOrderStats :one
 SELECT
     COUNT(*) FILTER (WHERE o.status = 'paid')       AS total_orders,
@@ -324,22 +360,24 @@ func (q *Queries) GetShiftTopItems(ctx context.Context, arg GetShiftTopItemsPara
 	return items, nil
 }
 
-const listShiftsByBranch = `-- name: ListShiftsByBranch :many
+const listShiftsByBranchPaginated = `-- name: ListShiftsByBranchPaginated :many
 SELECT s.id, s.business_id, s.branch_id, s.cashier_id, s.started_at, s.ended_at, s.is_open, s.total_orders, s.total_revenue, s.cash_revenue, s.qris_revenue, s.transfer_revenue, s.cancelled_orders, s.created_at, u.name as cashier_name
 FROM shifts s
 JOIN users u ON u.id = s.cashier_id
 WHERE s.branch_id = $1
   AND s.business_id = $2
 ORDER BY s.started_at DESC
-LIMIT 100
+LIMIT $3 OFFSET $4
 `
 
-type ListShiftsByBranchParams struct {
+type ListShiftsByBranchPaginatedParams struct {
 	BranchID   uuid.UUID `json:"branch_id"`
 	BusinessID uuid.UUID `json:"business_id"`
+	Limit      int32     `json:"limit"`
+	Offset     int32     `json:"offset"`
 }
 
-type ListShiftsByBranchRow struct {
+type ListShiftsByBranchPaginatedRow struct {
 	ID              uuid.UUID      `json:"id"`
 	BusinessID      uuid.UUID      `json:"business_id"`
 	BranchID        uuid.UUID      `json:"branch_id"`
@@ -357,15 +395,20 @@ type ListShiftsByBranchRow struct {
 	CashierName     string         `json:"cashier_name"`
 }
 
-func (q *Queries) ListShiftsByBranch(ctx context.Context, arg ListShiftsByBranchParams) ([]ListShiftsByBranchRow, error) {
-	rows, err := q.db.QueryContext(ctx, listShiftsByBranch, arg.BranchID, arg.BusinessID)
+func (q *Queries) ListShiftsByBranchPaginated(ctx context.Context, arg ListShiftsByBranchPaginatedParams) ([]ListShiftsByBranchPaginatedRow, error) {
+	rows, err := q.db.QueryContext(ctx, listShiftsByBranchPaginated,
+		arg.BranchID,
+		arg.BusinessID,
+		arg.Limit,
+		arg.Offset,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ListShiftsByBranchRow{}
+	items := []ListShiftsByBranchPaginatedRow{}
 	for rows.Next() {
-		var i ListShiftsByBranchRow
+		var i ListShiftsByBranchPaginatedRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.BusinessID,
@@ -396,21 +439,28 @@ func (q *Queries) ListShiftsByBranch(ctx context.Context, arg ListShiftsByBranch
 	return items, nil
 }
 
-const listShiftsByCashier = `-- name: ListShiftsByCashier :many
+const listShiftsByCashierPaginated = `-- name: ListShiftsByCashierPaginated :many
 SELECT id, business_id, branch_id, cashier_id, started_at, ended_at, is_open, total_orders, total_revenue, cash_revenue, qris_revenue, transfer_revenue, cancelled_orders, created_at FROM shifts
 WHERE cashier_id = $1
   AND business_id = $2
 ORDER BY started_at DESC
-LIMIT 50
+LIMIT $3 OFFSET $4
 `
 
-type ListShiftsByCashierParams struct {
+type ListShiftsByCashierPaginatedParams struct {
 	CashierID  uuid.UUID `json:"cashier_id"`
 	BusinessID uuid.UUID `json:"business_id"`
+	Limit      int32     `json:"limit"`
+	Offset     int32     `json:"offset"`
 }
 
-func (q *Queries) ListShiftsByCashier(ctx context.Context, arg ListShiftsByCashierParams) ([]Shift, error) {
-	rows, err := q.db.QueryContext(ctx, listShiftsByCashier, arg.CashierID, arg.BusinessID)
+func (q *Queries) ListShiftsByCashierPaginated(ctx context.Context, arg ListShiftsByCashierPaginatedParams) ([]Shift, error) {
+	rows, err := q.db.QueryContext(ctx, listShiftsByCashierPaginated,
+		arg.CashierID,
+		arg.BusinessID,
+		arg.Limit,
+		arg.Offset,
+	)
 	if err != nil {
 		return nil, err
 	}

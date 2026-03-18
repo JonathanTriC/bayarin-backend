@@ -11,6 +11,18 @@ import (
 	"github.com/google/uuid"
 )
 
+const countModifierGroups = `-- name: CountModifierGroups :one
+SELECT COUNT(*) FROM modifier_groups
+WHERE business_id = $1
+`
+
+func (q *Queries) CountModifierGroups(ctx context.Context, businessID uuid.UUID) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countModifierGroups, businessID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createModifierGroup = `-- name: CreateModifierGroup :one
 INSERT INTO modifier_groups (business_id, name, is_required, max_select)
 VALUES ($1, $2, $3, $4)
@@ -120,6 +132,48 @@ ORDER BY name ASC
 
 func (q *Queries) ListModifierGroups(ctx context.Context, businessID uuid.UUID) ([]ModifierGroup, error) {
 	rows, err := q.db.QueryContext(ctx, listModifierGroups, businessID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ModifierGroup{}
+	for rows.Next() {
+		var i ModifierGroup
+		if err := rows.Scan(
+			&i.ID,
+			&i.BusinessID,
+			&i.Name,
+			&i.IsRequired,
+			&i.MaxSelect,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listModifierGroupsPaginated = `-- name: ListModifierGroupsPaginated :many
+SELECT id, business_id, name, is_required, max_select FROM modifier_groups
+WHERE business_id = $1
+ORDER BY name ASC
+LIMIT $2 OFFSET $3
+`
+
+type ListModifierGroupsPaginatedParams struct {
+	BusinessID uuid.UUID `json:"business_id"`
+	Limit      int32     `json:"limit"`
+	Offset     int32     `json:"offset"`
+}
+
+func (q *Queries) ListModifierGroupsPaginated(ctx context.Context, arg ListModifierGroupsPaginatedParams) ([]ModifierGroup, error) {
+	rows, err := q.db.QueryContext(ctx, listModifierGroupsPaginated, arg.BusinessID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

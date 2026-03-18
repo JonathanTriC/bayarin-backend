@@ -2,6 +2,7 @@ package order
 
 import (
 	"github.com/bayarin/backend/internal/middleware"
+	"github.com/bayarin/backend/internal/pagination"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 )
@@ -22,21 +23,26 @@ func NewHandler(svc *Service) *Handler { return &Handler{svc: svc} }
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Param			status	query		string	false	"Filter by status (open, paid, cancelled)"
-//	@Success		200		{array}		Order
+//	@Param			page	query		int		false	"Page number (default: 1)"
+//	@Param			limit	query		int		false	"Items per page (default: 20, max: 100)"
+//	@Success		200		{object}	map[string]interface{}
 //	@Failure 500 {object} httputil.Error500Response
 //	@Router			/orders [get]
 func (h *Handler) List(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)
+	p := pagination.Parse(c)
 	
-	// If cashier → automatically filter by auth.BranchID
-	// If owner → allow branch_id as optional query param (if provided)
-	// We handle this inside service natively, but we can pass query gracefully.
+	// If cashier → automatically filter by auth.BranchID natively
 	
-	orders, err := h.svc.List(auth, c.Query("status"))
+	orders, total, err := h.svc.List(c.Context(), auth, c.Query("status"), p)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"success": false, "error": err.Error()})
 	}
-	return c.JSON(fiber.Map{"success": true, "data": orders})
+	return c.JSON(fiber.Map{
+		"success": true, 
+		"data": orders,
+		"meta": pagination.NewMeta(p, total),
+	})
 }
 
 // Search godoc

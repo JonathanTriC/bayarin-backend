@@ -73,6 +73,44 @@ func (q *Queries) AddOrderItemModifier(ctx context.Context, arg AddOrderItemModi
 	return i, err
 }
 
+const countOrders = `-- name: CountOrders :one
+SELECT COUNT(*) FROM orders
+WHERE business_id = $1
+  AND ($2::text = '' OR status::text = $2)
+`
+
+type CountOrdersParams struct {
+	BusinessID uuid.UUID `json:"business_id"`
+	Column2    string    `json:"column_2"`
+}
+
+func (q *Queries) CountOrders(ctx context.Context, arg CountOrdersParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countOrders, arg.BusinessID, arg.Column2)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countOrdersByBranch = `-- name: CountOrdersByBranch :one
+SELECT COUNT(*) FROM orders
+WHERE business_id = $1
+  AND branch_id = $2
+  AND ($3::text = '' OR status::text = $3)
+`
+
+type CountOrdersByBranchParams struct {
+	BusinessID uuid.UUID `json:"business_id"`
+	BranchID   uuid.UUID `json:"branch_id"`
+	Column3    string    `json:"column_3"`
+}
+
+func (q *Queries) CountOrdersByBranch(ctx context.Context, arg CountOrdersByBranchParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countOrdersByBranch, arg.BusinessID, arg.BranchID, arg.Column3)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createOrder = `-- name: CreateOrder :one
 INSERT INTO orders (
     id, business_id, branch_id, cashier_id, table_id,
@@ -340,21 +378,31 @@ func (q *Queries) ListOrderItems(ctx context.Context, orderID uuid.UUID) ([]Orde
 	return items, nil
 }
 
-const listOrdersByStatus = `-- name: ListOrdersByStatus :many
-SELECT id, business_id, branch_id, cashier_id, table_id, type, customer_name, status, subtotal, tax_amount, service_charge_amount, total, created_at, order_number
-FROM orders
+const listOrdersByBranchPaginated = `-- name: ListOrdersByBranchPaginated :many
+SELECT id, business_id, branch_id, cashier_id, table_id, type, customer_name, status, subtotal, tax_amount, service_charge_amount, total, created_at, order_number FROM orders
 WHERE business_id = $1
-  AND status      = $2
+  AND branch_id = $2
+  AND ($3::text = '' OR status::text = $3)
 ORDER BY created_at DESC
+LIMIT $4 OFFSET $5
 `
 
-type ListOrdersByStatusParams struct {
-	BusinessID uuid.UUID   `json:"business_id"`
-	Status     OrderStatus `json:"status"`
+type ListOrdersByBranchPaginatedParams struct {
+	BusinessID uuid.UUID `json:"business_id"`
+	BranchID   uuid.UUID `json:"branch_id"`
+	Column3    string    `json:"column_3"`
+	Limit      int32     `json:"limit"`
+	Offset     int32     `json:"offset"`
 }
 
-func (q *Queries) ListOrdersByStatus(ctx context.Context, arg ListOrdersByStatusParams) ([]Order, error) {
-	rows, err := q.db.QueryContext(ctx, listOrdersByStatus, arg.BusinessID, arg.Status)
+func (q *Queries) ListOrdersByBranchPaginated(ctx context.Context, arg ListOrdersByBranchPaginatedParams) ([]Order, error) {
+	rows, err := q.db.QueryContext(ctx, listOrdersByBranchPaginated,
+		arg.BusinessID,
+		arg.BranchID,
+		arg.Column3,
+		arg.Limit,
+		arg.Offset,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -391,23 +439,28 @@ func (q *Queries) ListOrdersByStatus(ctx context.Context, arg ListOrdersByStatus
 	return items, nil
 }
 
-const listOrdersByStatusAndBranch = `-- name: ListOrdersByStatusAndBranch :many
-SELECT id, business_id, branch_id, cashier_id, table_id, type, customer_name, status, subtotal, tax_amount, service_charge_amount, total, created_at, order_number
-FROM orders
+const listOrdersPaginated = `-- name: ListOrdersPaginated :many
+SELECT id, business_id, branch_id, cashier_id, table_id, type, customer_name, status, subtotal, tax_amount, service_charge_amount, total, created_at, order_number FROM orders
 WHERE business_id = $1
-  AND branch_id   = $2
-  AND status      = $3
+  AND ($2::text = '' OR status::text = $2)
 ORDER BY created_at DESC
+LIMIT $3 OFFSET $4
 `
 
-type ListOrdersByStatusAndBranchParams struct {
-	BusinessID uuid.UUID   `json:"business_id"`
-	BranchID   uuid.UUID   `json:"branch_id"`
-	Status     OrderStatus `json:"status"`
+type ListOrdersPaginatedParams struct {
+	BusinessID uuid.UUID `json:"business_id"`
+	Column2    string    `json:"column_2"`
+	Limit      int32     `json:"limit"`
+	Offset     int32     `json:"offset"`
 }
 
-func (q *Queries) ListOrdersByStatusAndBranch(ctx context.Context, arg ListOrdersByStatusAndBranchParams) ([]Order, error) {
-	rows, err := q.db.QueryContext(ctx, listOrdersByStatusAndBranch, arg.BusinessID, arg.BranchID, arg.Status)
+func (q *Queries) ListOrdersPaginated(ctx context.Context, arg ListOrdersPaginatedParams) ([]Order, error) {
+	rows, err := q.db.QueryContext(ctx, listOrdersPaginated,
+		arg.BusinessID,
+		arg.Column2,
+		arg.Limit,
+		arg.Offset,
+	)
 	if err != nil {
 		return nil, err
 	}
