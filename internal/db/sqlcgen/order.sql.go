@@ -7,6 +7,7 @@ package sqlcgen
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
@@ -73,28 +74,37 @@ func (q *Queries) AddOrderItemModifier(ctx context.Context, arg AddOrderItemModi
 }
 
 const createOrder = `-- name: CreateOrder :one
-INSERT INTO orders (business_id, branch_id, cashier_id, table_id, type, customer_name)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, business_id, branch_id, cashier_id, table_id, type, customer_name, status, subtotal, tax_amount, service_charge_amount, total, created_at
+INSERT INTO orders (
+    id, business_id, branch_id, cashier_id, table_id,
+    type, customer_name, status, order_number,
+    subtotal, tax_amount, service_charge_amount, total,
+    created_at
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, 'open', $8, 0, 0, 0, 0, NOW())
+RETURNING id, business_id, branch_id, cashier_id, table_id, type, customer_name, status, subtotal, tax_amount, service_charge_amount, total, created_at, order_number
 `
 
 type CreateOrderParams struct {
-	BusinessID   uuid.UUID     `json:"business_id"`
-	BranchID     uuid.UUID     `json:"branch_id"`
-	CashierID    uuid.UUID     `json:"cashier_id"`
-	TableID      uuid.NullUUID `json:"table_id"`
-	Type         OrderType     `json:"type"`
-	CustomerName string        `json:"customer_name"`
+	ID           uuid.UUID      `json:"id"`
+	BusinessID   uuid.UUID      `json:"business_id"`
+	BranchID     uuid.UUID      `json:"branch_id"`
+	CashierID    uuid.UUID      `json:"cashier_id"`
+	TableID      uuid.NullUUID  `json:"table_id"`
+	Type         OrderType      `json:"type"`
+	CustomerName string         `json:"customer_name"`
+	OrderNumber  sql.NullString `json:"order_number"`
 }
 
 func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order, error) {
 	row := q.db.QueryRowContext(ctx, createOrder,
+		arg.ID,
 		arg.BusinessID,
 		arg.BranchID,
 		arg.CashierID,
 		arg.TableID,
 		arg.Type,
 		arg.CustomerName,
+		arg.OrderNumber,
 	)
 	var i Order
 	err := row.Scan(
@@ -111,6 +121,7 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order
 		&i.ServiceChargeAmount,
 		&i.Total,
 		&i.CreatedAt,
+		&i.OrderNumber,
 	)
 	return i, err
 }
@@ -141,8 +152,25 @@ func (q *Queries) DeleteOrderItemModifiers(ctx context.Context, orderItemID uuid
 	return err
 }
 
+const getNextOrderNumber = `-- name: GetNextOrderNumber :one
+SELECT COALESCE(MAX(
+    CAST(SUBSTRING(order_number FROM 5) AS INTEGER)
+), 0) + 1 AS next_seq
+FROM orders
+WHERE branch_id = $1
+  AND DATE(created_at AT TIME ZONE 'Asia/Jakarta') = DATE(NOW() AT TIME ZONE 'Asia/Jakarta')
+  AND order_number IS NOT NULL
+`
+
+func (q *Queries) GetNextOrderNumber(ctx context.Context, branchID uuid.UUID) (int32, error) {
+	row := q.db.QueryRowContext(ctx, getNextOrderNumber, branchID)
+	var next_seq int32
+	err := row.Scan(&next_seq)
+	return next_seq, err
+}
+
 const getOrderByID = `-- name: GetOrderByID :one
-SELECT id, business_id, branch_id, cashier_id, table_id, type, customer_name, status, subtotal, tax_amount, service_charge_amount, total, created_at
+SELECT id, business_id, branch_id, cashier_id, table_id, type, customer_name, status, subtotal, tax_amount, service_charge_amount, total, created_at, order_number
 FROM orders
 WHERE id          = $1
   AND business_id = $2
@@ -171,12 +199,13 @@ func (q *Queries) GetOrderByID(ctx context.Context, arg GetOrderByIDParams) (Ord
 		&i.ServiceChargeAmount,
 		&i.Total,
 		&i.CreatedAt,
+		&i.OrderNumber,
 	)
 	return i, err
 }
 
 const getOrderByIDForUpdate = `-- name: GetOrderByIDForUpdate :one
-SELECT id, business_id, branch_id, cashier_id, table_id, type, customer_name, status, subtotal, tax_amount, service_charge_amount, total, created_at
+SELECT id, business_id, branch_id, cashier_id, table_id, type, customer_name, status, subtotal, tax_amount, service_charge_amount, total, created_at, order_number
 FROM orders
 WHERE id          = $1
   AND business_id = $2
@@ -206,6 +235,7 @@ func (q *Queries) GetOrderByIDForUpdate(ctx context.Context, arg GetOrderByIDFor
 		&i.ServiceChargeAmount,
 		&i.Total,
 		&i.CreatedAt,
+		&i.OrderNumber,
 	)
 	return i, err
 }
@@ -311,7 +341,7 @@ func (q *Queries) ListOrderItems(ctx context.Context, orderID uuid.UUID) ([]Orde
 }
 
 const listOrdersByStatus = `-- name: ListOrdersByStatus :many
-SELECT id, business_id, branch_id, cashier_id, table_id, type, customer_name, status, subtotal, tax_amount, service_charge_amount, total, created_at
+SELECT id, business_id, branch_id, cashier_id, table_id, type, customer_name, status, subtotal, tax_amount, service_charge_amount, total, created_at, order_number
 FROM orders
 WHERE business_id = $1
   AND status      = $2
@@ -346,6 +376,7 @@ func (q *Queries) ListOrdersByStatus(ctx context.Context, arg ListOrdersByStatus
 			&i.ServiceChargeAmount,
 			&i.Total,
 			&i.CreatedAt,
+			&i.OrderNumber,
 		); err != nil {
 			return nil, err
 		}
@@ -361,7 +392,7 @@ func (q *Queries) ListOrdersByStatus(ctx context.Context, arg ListOrdersByStatus
 }
 
 const listOrdersByStatusAndBranch = `-- name: ListOrdersByStatusAndBranch :many
-SELECT id, business_id, branch_id, cashier_id, table_id, type, customer_name, status, subtotal, tax_amount, service_charge_amount, total, created_at
+SELECT id, business_id, branch_id, cashier_id, table_id, type, customer_name, status, subtotal, tax_amount, service_charge_amount, total, created_at, order_number
 FROM orders
 WHERE business_id = $1
   AND branch_id   = $2
@@ -398,6 +429,7 @@ func (q *Queries) ListOrdersByStatusAndBranch(ctx context.Context, arg ListOrder
 			&i.ServiceChargeAmount,
 			&i.Total,
 			&i.CreatedAt,
+			&i.OrderNumber,
 		); err != nil {
 			return nil, err
 		}
@@ -457,7 +489,7 @@ UPDATE orders
 SET status = $2
 WHERE id          = $1
   AND business_id = $3
-RETURNING id, business_id, branch_id, cashier_id, table_id, type, customer_name, status, subtotal, tax_amount, service_charge_amount, total, created_at
+RETURNING id, business_id, branch_id, cashier_id, table_id, type, customer_name, status, subtotal, tax_amount, service_charge_amount, total, created_at, order_number
 `
 
 type UpdateOrderStatusParams struct {
@@ -483,6 +515,7 @@ func (q *Queries) UpdateOrderStatus(ctx context.Context, arg UpdateOrderStatusPa
 		&i.ServiceChargeAmount,
 		&i.Total,
 		&i.CreatedAt,
+		&i.OrderNumber,
 	)
 	return i, err
 }
@@ -495,7 +528,7 @@ SET
     service_charge_amount = $4,
     total                 = $5
 WHERE id = $1
-RETURNING id, business_id, branch_id, cashier_id, table_id, type, customer_name, status, subtotal, tax_amount, service_charge_amount, total, created_at
+RETURNING id, business_id, branch_id, cashier_id, table_id, type, customer_name, status, subtotal, tax_amount, service_charge_amount, total, created_at, order_number
 `
 
 type UpdateOrderTotalsParams struct {
@@ -529,6 +562,7 @@ func (q *Queries) UpdateOrderTotals(ctx context.Context, arg UpdateOrderTotalsPa
 		&i.ServiceChargeAmount,
 		&i.Total,
 		&i.CreatedAt,
+		&i.OrderNumber,
 	)
 	return i, err
 }

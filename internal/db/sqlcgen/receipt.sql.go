@@ -17,6 +17,7 @@ import (
 const getReceiptData = `-- name: GetReceiptData :one
 SELECT
     o.id                        AS order_id,
+    o.order_number              AS order_number,
     o.type                      AS order_type,
     o.customer_name,
     o.status                    AS order_status,
@@ -51,6 +52,7 @@ type GetReceiptDataParams struct {
 
 type GetReceiptDataRow struct {
 	OrderID              uuid.UUID      `json:"order_id"`
+	OrderNumber          sql.NullString `json:"order_number"`
 	OrderType            OrderType      `json:"order_type"`
 	CustomerName         string         `json:"customer_name"`
 	OrderStatus          OrderStatus    `json:"order_status"`
@@ -77,6 +79,7 @@ func (q *Queries) GetReceiptData(ctx context.Context, arg GetReceiptDataParams) 
 	var i GetReceiptDataRow
 	err := row.Scan(
 		&i.OrderID,
+		&i.OrderNumber,
 		&i.OrderType,
 		&i.CustomerName,
 		&i.OrderStatus,

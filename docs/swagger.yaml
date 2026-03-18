@@ -373,6 +373,8 @@ definitions:
         items:
           $ref: '#/definitions/order.OrderItem'
         type: array
+      order_number:
+        type: string
       service_charge_amount:
         type: number
       status:

@@ -1,6 +1,7 @@
 -- name: GetReceiptData :one
 SELECT
     o.id                        AS order_id,
+    o.order_number              AS order_number,
     o.type                      AS order_type,
     o.customer_name,
     o.status                    AS order_status,

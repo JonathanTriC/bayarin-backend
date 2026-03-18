@@ -287,19 +287,20 @@ type ModifierOption struct {
 }
 
 type Order struct {
-	ID                  uuid.UUID     `json:"id"`
-	BusinessID          uuid.UUID     `json:"business_id"`
-	BranchID            uuid.UUID     `json:"branch_id"`
-	CashierID           uuid.UUID     `json:"cashier_id"`
-	TableID             uuid.NullUUID `json:"table_id"`
-	Type                OrderType     `json:"type"`
-	CustomerName        string        `json:"customer_name"`
-	Status              OrderStatus   `json:"status"`
-	Subtotal            string        `json:"subtotal"`
-	TaxAmount           string        `json:"tax_amount"`
-	ServiceChargeAmount string        `json:"service_charge_amount"`
-	Total               string        `json:"total"`
-	CreatedAt           time.Time     `json:"created_at"`
+	ID                  uuid.UUID      `json:"id"`
+	BusinessID          uuid.UUID      `json:"business_id"`
+	BranchID            uuid.UUID      `json:"branch_id"`
+	CashierID           uuid.UUID      `json:"cashier_id"`
+	TableID             uuid.NullUUID  `json:"table_id"`
+	Type                OrderType      `json:"type"`
+	CustomerName        string         `json:"customer_name"`
+	Status              OrderStatus    `json:"status"`
+	Subtotal            string         `json:"subtotal"`
+	TaxAmount           string         `json:"tax_amount"`
+	ServiceChargeAmount string         `json:"service_charge_amount"`
+	Total               string         `json:"total"`
+	CreatedAt           time.Time      `json:"created_at"`
+	OrderNumber         sql.NullString `json:"order_number"`
 }
 
 type OrderItem struct {

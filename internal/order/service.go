@@ -13,6 +13,7 @@ import (
 // Order represents an order entity.
 type Order struct {
 	ID                  uuid.UUID   `json:"id"`
+	OrderNumber         string      `json:"order_number"`
 	BusinessID          uuid.UUID   `json:"business_id"`
 	BranchID            uuid.UUID   `json:"branch_id"`
 	CashierID           uuid.UUID   `json:"cashier_id"`
@@ -87,7 +88,7 @@ func NewService(db *sql.DB) *Service { return &Service{db: db} }
 
 // List returns orders for the business, optionally filtered by status.
 func (s *Service) List(auth middleware.AuthContext, statusFilter string) ([]Order, error) {
-	query := `SELECT id, business_id, branch_id, cashier_id, table_id, type, customer_name,
+	query := `SELECT id, order_number, business_id, branch_id, cashier_id, table_id, type, customer_name,
 	                 status, subtotal, tax_amount, service_charge_amount, total, created_at
 	          FROM orders WHERE business_id = $1`
 	args := []interface{}{auth.BusinessID}
@@ -117,7 +118,7 @@ func (s *Service) List(auth middleware.AuthContext, statusFilter string) ([]Orde
 	for rows.Next() {
 		var o Order
 		var tableID sql.NullString
-		if err := rows.Scan(&o.ID, &o.BusinessID, &o.BranchID, &o.CashierID, &tableID,
+		if err := rows.Scan(&o.ID, &o.OrderNumber, &o.BusinessID, &o.BranchID, &o.CashierID, &tableID,
 			&o.Type, &o.CustomerName, &o.Status, &o.Subtotal, &o.TaxAmount,
 			&o.ServiceChargeAmount, &o.Total, &o.CreatedAt); err != nil {
 			return nil, err
@@ -140,15 +141,41 @@ func (s *Service) Create(auth middleware.AuthContext, input CreateOrderInput) (*
 		return nil, errors.New("type must be 'dine_in' or 'takeaway'")
 	}
 
+	tx, err := s.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	// Lock branch sequence safety
+	_, err = tx.Exec(`SELECT 1 FROM branches WHERE id = $1 FOR UPDATE`, input.BranchID)
+	if err != nil {
+		return nil, fmt.Errorf("lock branch: %w", err)
+	}
+
+	var nextSeq int
+	err = tx.QueryRow(`
+		SELECT COALESCE(MAX(CAST(SUBSTRING(order_number FROM 5) AS INTEGER)), 0) + 1
+		FROM orders
+		WHERE branch_id = $1
+		  AND DATE(created_at AT TIME ZONE 'Asia/Jakarta') = DATE(NOW() AT TIME ZONE 'Asia/Jakarta')
+		  AND order_number IS NOT NULL
+	`, input.BranchID).Scan(&nextSeq)
+	if err != nil {
+		return nil, fmt.Errorf("get next sequence: %w", err)
+	}
+
+	orderNumber := fmt.Sprintf("ORD-%04d", nextSeq)
+
 	var o Order
 	var tableID sql.NullString
-	err := s.db.QueryRow(
-		`INSERT INTO orders (business_id, branch_id, cashier_id, table_id, type, customer_name)
-		 VALUES ($1, $2, $3, $4, $5, $6)
-		 RETURNING id, business_id, branch_id, cashier_id, table_id, type, customer_name,
+	err = tx.QueryRow(
+		`INSERT INTO orders (business_id, branch_id, cashier_id, table_id, type, customer_name, order_number)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)
+		 RETURNING id, order_number, business_id, branch_id, cashier_id, table_id, type, customer_name,
 		           status, subtotal, tax_amount, service_charge_amount, total, created_at`,
-		auth.BusinessID, input.BranchID, auth.UserID, input.TableID, input.Type, input.CustomerName,
-	).Scan(&o.ID, &o.BusinessID, &o.BranchID, &o.CashierID, &tableID,
+		auth.BusinessID, input.BranchID, auth.UserID, input.TableID, input.Type, input.CustomerName, orderNumber,
+	).Scan(&o.ID, &o.OrderNumber, &o.BusinessID, &o.BranchID, &o.CashierID, &tableID,
 		&o.Type, &o.CustomerName, &o.Status, &o.Subtotal, &o.TaxAmount,
 		&o.ServiceChargeAmount, &o.Total, &o.CreatedAt)
 	if err != nil {
@@ -161,7 +188,10 @@ func (s *Service) Create(auth middleware.AuthContext, input CreateOrderInput) (*
 
 	// Mark table as occupied if dine_in.
 	if input.Type == "dine_in" && input.TableID != nil {
-		_, _ = s.db.Exec(`UPDATE tables SET status='occupied' WHERE id=$1`, input.TableID)
+		_, _ = tx.Exec(`UPDATE tables SET status='occupied' WHERE id=$1`, input.TableID)
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
 	}
 	return &o, nil
 }
@@ -171,10 +201,10 @@ func (s *Service) GetByID(businessID, orderID uuid.UUID) (*Order, error) {
 	var o Order
 	var tableID sql.NullString
 	row := s.db.QueryRow(
-		`SELECT id, business_id, branch_id, cashier_id, table_id, type, customer_name,
+		`SELECT id, order_number, business_id, branch_id, cashier_id, table_id, type, customer_name,
 		        status, subtotal, tax_amount, service_charge_amount, total, created_at
 		 FROM orders WHERE id = $1 AND business_id = $2`, orderID, businessID)
-	if err := row.Scan(&o.ID, &o.BusinessID, &o.BranchID, &o.CashierID, &tableID,
+	if err := row.Scan(&o.ID, &o.OrderNumber, &o.BusinessID, &o.BranchID, &o.CashierID, &tableID,
 		&o.Type, &o.CustomerName, &o.Status, &o.Subtotal, &o.TaxAmount,
 		&o.ServiceChargeAmount, &o.Total, &o.CreatedAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -501,7 +531,7 @@ func (s *Service) Search(auth middleware.AuthContext, query, orderType, status s
 	like := "%" + strings.TrimSpace(query) + "%"
 	args := []interface{}{auth.BusinessID, like}
 
-	sqlStr := `SELECT id, business_id, branch_id, cashier_id, table_id, type, customer_name,
+	sqlStr := `SELECT id, order_number, business_id, branch_id, cashier_id, table_id, type, customer_name,
 	                  status, subtotal, tax_amount, service_charge_amount, total, created_at
 	           FROM orders
 	           WHERE business_id = $1 AND customer_name ILIKE $2`

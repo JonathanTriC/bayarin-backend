@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/bayarin/backend/internal/db/sqlcgen"
 	"github.com/google/uuid"
@@ -123,7 +122,7 @@ func (s *serviceImpl) GetReceiptData(ctx context.Context, orderID uuid.UUID, bus
 		BranchName:           base.BranchName,
 		BranchAddress:        base.BranchAddress,
 		OrderID:              base.OrderID,
-		OrderNumber:          "ORD-" + strings.ToUpper(base.OrderID.String()[:8]),
+		OrderNumber:          base.OrderNumber.String,
 		OrderType:            orderType,
 		CustomerName:         base.CustomerName,
 		OrderedAt:            base.OrderedAt,

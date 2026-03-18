@@ -19,7 +19,7 @@ type ReceiptData struct {
 
 	// Order
 	OrderID      uuid.UUID
-	OrderNumber  string // "ORD-" + first 8 chars of UUID uppercased
+	OrderNumber  string // e.g. "ORD-0042" from db sequence
 	OrderType    string // "Dine In" or "Takeaway"
 	CustomerName string
 	OrderedAt    time.Time

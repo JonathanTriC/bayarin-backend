@@ -1,7 +1,21 @@
 -- name: CreateOrder :one
-INSERT INTO orders (business_id, branch_id, cashier_id, table_id, type, customer_name)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO orders (
+    id, business_id, branch_id, cashier_id, table_id,
+    type, customer_name, status, order_number,
+    subtotal, tax_amount, service_charge_amount, total,
+    created_at
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, 'open', $8, 0, 0, 0, 0, NOW())
 RETURNING *;
+
+-- name: GetNextOrderNumber :one
+SELECT COALESCE(MAX(
+    CAST(SUBSTRING(order_number FROM 5) AS INTEGER)
+), 0) + 1 AS next_seq
+FROM orders
+WHERE branch_id = $1
+  AND DATE(created_at AT TIME ZONE 'Asia/Jakarta') = DATE(NOW() AT TIME ZONE 'Asia/Jakarta')
+  AND order_number IS NOT NULL;
 
 -- name: GetOrderByID :one
 SELECT *

@@ -38,6 +38,7 @@ type Querier interface {
 	GetModifierGroupIDsByMenuItem(ctx context.Context, menuItemID uuid.UUID) ([]uuid.UUID, error)
 	GetModifierGroupsWithOptionsByMenuItem(ctx context.Context, menuItemID uuid.UUID) ([]GetModifierGroupsWithOptionsByMenuItemRow, error)
 	GetModifierOptionByID(ctx context.Context, id uuid.UUID) (ModifierOption, error)
+	GetNextOrderNumber(ctx context.Context, branchID uuid.UUID) (int32, error)
 	GetOrderByID(ctx context.Context, arg GetOrderByIDParams) (Order, error)
 	GetOrderByIDForUpdate(ctx context.Context, arg GetOrderByIDForUpdateParams) (Order, error)
 	GetOrderItemByID(ctx context.Context, arg GetOrderItemByIDParams) (OrderItem, error)

@@ -2591,6 +2591,9 @@ const docTemplate = `{
                         "$ref": "#/definitions/order.OrderItem"
                     }
                 },
+                "order_number": {
+                    "type": "string"
+                },
                 "service_charge_amount": {
                     "type": "number"
                 },
