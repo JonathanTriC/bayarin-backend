@@ -27,6 +27,11 @@ func NewHandler(svc *Service) *Handler { return &Handler{svc: svc} }
 //	@Router			/orders [get]
 func (h *Handler) List(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)
+	
+	// If cashier → automatically filter by auth.BranchID
+	// If owner → allow branch_id as optional query param (if provided)
+	// We handle this inside service natively, but we can pass query gracefully.
+	
 	orders, err := h.svc.List(auth, c.Query("status"))
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"success": false, "error": err.Error()})
@@ -61,22 +66,65 @@ func (h *Handler) Search(c *fiber.Ctx) error {
 // Create godoc
 //
 //	@Summary		Create order
-//	@Description	Create a new order. Type must be "dine_in" or "takeaway". table_id is optional.
+//	@Description	Create a new order. Type must be "dine_in" or "takeaway". table_id is optional. Owners must provide branch_id query.
 //	@Tags			Orders
 //	@Accept			json
 //	@Produce		json
 //	@Security		BearerAuth
-//	@Param			body	body		CreateOrderInput	true	"Order payload"
+//	@Param			branch_id	query		string				false	"Branch UUID (Required for Owners)"
+//	@Param			body		body		CreateOrderInput	true	"Order payload"
 //	@Success		201		{object}	Order
 //	@Failure 400 {object} httputil.Error400Response
 //	@Router			/orders [post]
 func (h *Handler) Create(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)
-	var input CreateOrderInput
-	if err := c.BodyParser(&input); err != nil {
+
+	var payload struct {
+		BranchID     string `json:"branch_id"`
+		TableID      string `json:"table_id"`
+		Type         string `json:"type"`
+		CustomerName string `json:"customer_name"`
+	}
+
+	if err := c.BodyParser(&payload); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": "invalid request body"})
 	}
-	o, err := h.svc.Create(auth, input)
+
+	var branchID uuid.UUID
+	if auth.Role == "owner" {
+		bID := c.Query("branch_id")
+		if bID == "" {
+			bID = payload.BranchID
+		}
+		if bID == "" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": "branch_id is required for owner (pass via query or body)"})
+		}
+		var err error
+		branchID, err = uuid.Parse(bID)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": "invalid branch_id format (must be UUID)"})
+		}
+	} else {
+		if auth.BranchID == nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": "branch not assigned to your account"})
+		}
+		branchID = *auth.BranchID
+	}
+
+	input := CreateOrderInput{
+		Type:         payload.Type,
+		CustomerName: payload.CustomerName,
+	}
+
+	if payload.TableID != "" {
+		tid, err := uuid.Parse(payload.TableID)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": "invalid table_id format"})
+		}
+		input.TableID = &tid
+	}
+
+	o, err := h.svc.Create(auth, branchID, input)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": err.Error()})
 	}

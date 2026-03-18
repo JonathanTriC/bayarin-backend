@@ -16,7 +16,7 @@ func NewHandler(svc Service) *Handler {
 
 // GenerateQRISInput represents input for generate dynamic QRIS
 type GenerateQRISInput struct {
-	BranchID string `json:"branch_id"`
+	BranchID string `json:"branch_id,omitempty"` // only required for owner role
 	Amount   int64  `json:"amount"`
 }
 
@@ -102,12 +102,26 @@ func (h *Handler) Generate(c *fiber.Ctx) error {
 		})
 	}
 
-	branchID, err := uuid.Parse(input.BranchID)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false,
-			"error":   "invalid branch_id format",
-		})
+	auth := c.Locals("auth").(middleware.AuthContext)
+	
+	var branchID uuid.UUID
+	if auth.BranchID != nil {
+		branchID = *auth.BranchID
+	} else {
+		if input.BranchID == "" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"success": false,
+				"error":   "branch_id is required",
+			})
+		}
+		var errParse error
+		branchID, errParse = uuid.Parse(input.BranchID)
+		if errParse != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"success": false,
+				"error":   "invalid branch_id format",
+			})
+		}
 	}
 
 	if input.Amount <= 0 {

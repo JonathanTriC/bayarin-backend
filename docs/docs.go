@@ -974,7 +974,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Create a new order. Type must be \"dine_in\" or \"takeaway\". table_id is optional.",
+                "description": "Create a new order. Type must be \"dine_in\" or \"takeaway\". table_id is optional. Owners must provide branch_id query.",
                 "consumes": [
                     "application/json"
                 ],
@@ -986,6 +986,12 @@ const docTemplate = `{
                 ],
                 "summary": "Create order",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Branch UUID (Required for Owners)",
+                        "name": "branch_id",
+                        "in": "query"
+                    },
                     {
                         "description": "Order payload",
                         "name": "body",
@@ -2857,9 +2863,6 @@ const docTemplate = `{
         "order.CreateOrderInput": {
             "type": "object",
             "properties": {
-                "branch_id": {
-                    "type": "string"
-                },
                 "customer_name": {
                     "type": "string"
                 },
@@ -3042,6 +3045,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "branch_id": {
+                    "description": "only required for owner role",
                     "type": "string"
                 }
             }
@@ -3112,9 +3116,6 @@ const docTemplate = `{
         "table.CreateTableInput": {
             "type": "object",
             "properties": {
-                "branch_id": {
-                    "type": "string"
-                },
                 "name": {
                     "type": "string"
                 },

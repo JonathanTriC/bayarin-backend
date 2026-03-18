@@ -24,7 +24,6 @@ type Table struct {
 
 // CreateTableInput is the payload for creating a table.
 type CreateTableInput struct {
-	BranchID uuid.UUID `json:"branch_id"`
 	Name     string    `json:"name"`
 	QRCode   string    `json:"qr_code"`
 }
@@ -102,7 +101,7 @@ func (s *Service) List(businessID uuid.UUID, branchIDFilter *uuid.UUID) ([]Table
 }
 
 // Create inserts a new table, validating that the branch belongs to the business.
-func (s *Service) Create(businessID uuid.UUID, input CreateTableInput) (*Table, error) {
+func (s *Service) Create(businessID uuid.UUID, branchID uuid.UUID, input CreateTableInput) (*Table, error) {
 	if input.Name == "" {
 		return nil, errors.New("table name is required")
 	}
@@ -111,7 +110,7 @@ func (s *Service) Create(businessID uuid.UUID, input CreateTableInput) (*Table, 
 	var count int
 	if err := s.db.QueryRow(
 		`SELECT COUNT(*) FROM branches WHERE id = $1 AND business_id = $2`,
-		input.BranchID, businessID,
+		branchID, businessID,
 	).Scan(&count); err != nil || count == 0 {
 		return nil, errors.New("branch not found or does not belong to this business")
 	}
@@ -121,7 +120,7 @@ func (s *Service) Create(businessID uuid.UUID, input CreateTableInput) (*Table, 
 	err := s.db.QueryRow(
 		`INSERT INTO tables (branch_id, name, qr_code) VALUES ($1, $2, $3)
 		 RETURNING id, branch_id, name, qr_code, status, reserved_by, reserved_note, updated_at, created_at`,
-		input.BranchID, input.Name, input.QRCode,
+		branchID, input.Name, input.QRCode,
 	).Scan(&t.ID, &t.BranchID, &t.Name, &t.QRCode, &t.Status, &rBy, &rNote, &upAt, &t.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("create table: %w", err)

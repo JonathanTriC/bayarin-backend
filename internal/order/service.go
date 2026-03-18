@@ -51,7 +51,6 @@ type OrderItemModifier struct {
 
 // CreateOrderInput is the payload for creating a new order.
 type CreateOrderInput struct {
-	BranchID     uuid.UUID  `json:"branch_id"`
 	TableID      *uuid.UUID `json:"table_id"`
 	Type         string     `json:"type"`
 	CustomerName string     `json:"customer_name"`
@@ -136,7 +135,7 @@ func (s *Service) List(auth middleware.AuthContext, statusFilter string) ([]Orde
 }
 
 // Create inserts a new order.
-func (s *Service) Create(auth middleware.AuthContext, input CreateOrderInput) (*Order, error) {
+func (s *Service) Create(auth middleware.AuthContext, branchID uuid.UUID, input CreateOrderInput) (*Order, error) {
 	if input.Type != "dine_in" && input.Type != "takeaway" {
 		return nil, errors.New("type must be 'dine_in' or 'takeaway'")
 	}
@@ -148,7 +147,7 @@ func (s *Service) Create(auth middleware.AuthContext, input CreateOrderInput) (*
 	defer tx.Rollback()
 
 	// Lock branch sequence safety
-	_, err = tx.Exec(`SELECT 1 FROM branches WHERE id = $1 FOR UPDATE`, input.BranchID)
+	_, err = tx.Exec(`SELECT 1 FROM branches WHERE id = $1 FOR UPDATE`, branchID)
 	if err != nil {
 		return nil, fmt.Errorf("lock branch: %w", err)
 	}
@@ -164,7 +163,7 @@ func (s *Service) Create(auth middleware.AuthContext, input CreateOrderInput) (*
 			}
 			return nil, fmt.Errorf("lock table: %w", err)
 		}
-		if tableBranchID != input.BranchID {
+		if tableBranchID != branchID {
 			return nil, errors.New("table does not belong to this branch")
 		}
 		if tableStatus == "occupied" {
@@ -179,7 +178,7 @@ func (s *Service) Create(auth middleware.AuthContext, input CreateOrderInput) (*
 		WHERE branch_id = $1
 		  AND DATE(created_at AT TIME ZONE 'Asia/Jakarta') = DATE(NOW() AT TIME ZONE 'Asia/Jakarta')
 		  AND order_number IS NOT NULL
-	`, input.BranchID).Scan(&nextSeq)
+	`, branchID).Scan(&nextSeq)
 	if err != nil {
 		return nil, fmt.Errorf("get next sequence: %w", err)
 	}
@@ -193,7 +192,7 @@ func (s *Service) Create(auth middleware.AuthContext, input CreateOrderInput) (*
 		 VALUES ($1, $2, $3, $4, $5, $6, $7)
 		 RETURNING id, order_number, business_id, branch_id, cashier_id, table_id, type, customer_name,
 		           status, subtotal, tax_amount, service_charge_amount, total, created_at`,
-		auth.BusinessID, input.BranchID, auth.UserID, input.TableID, input.Type, input.CustomerName, orderNumber,
+		auth.BusinessID, branchID, auth.UserID, input.TableID, input.Type, input.CustomerName, orderNumber,
 	).Scan(&o.ID, &o.OrderNumber, &o.BusinessID, &o.BranchID, &o.CashierID, &tableID,
 		&o.Type, &o.CustomerName, &o.Status, &o.Subtotal, &o.TaxAmount,
 		&o.ServiceChargeAmount, &o.Total, &o.CreatedAt)

@@ -346,8 +346,6 @@ definitions:
     type: object
   order.CreateOrderInput:
     properties:
-      branch_id:
-        type: string
       customer_name:
         type: string
       table_id:
@@ -467,6 +465,7 @@ definitions:
       amount:
         type: integer
       branch_id:
+        description: only required for owner role
         type: string
     type: object
   staff.CreateStaffInput:
@@ -512,8 +511,6 @@ definitions:
     type: object
   table.CreateTableInput:
     properties:
-      branch_id:
-        type: string
       name:
         type: string
       qr_code:
@@ -1178,8 +1175,12 @@ paths:
       consumes:
       - application/json
       description: Create a new order. Type must be "dine_in" or "takeaway". table_id
-        is optional.
+        is optional. Owners must provide branch_id query.
       parameters:
+      - description: Branch UUID (Required for Owners)
+        in: query
+        name: branch_id
+        type: string
       - description: Order payload
         in: body
         name: body

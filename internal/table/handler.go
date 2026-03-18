@@ -29,12 +29,20 @@ func NewHandler(svc *Service) *Handler { return &Handler{svc: svc} }
 func (h *Handler) List(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)
 	var branchIDFilter *uuid.UUID
-	if bid := c.Query("branch_id"); bid != "" {
-		parsed, err := uuid.Parse(bid)
-		if err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": "invalid branch_id"})
+	if auth.Role == "owner" {
+		if bid := c.Query("branch_id"); bid != "" {
+			parsed, err := uuid.Parse(bid)
+			if err != nil {
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": "invalid branch_id"})
+			}
+			branchIDFilter = &parsed
 		}
-		branchIDFilter = &parsed
+	} else {
+		// cashier - scoped automatically
+		if auth.BranchID == nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": "branch not assigned"})
+		}
+		branchIDFilter = auth.BranchID
 	}
 	tables, err := h.svc.List(auth.BusinessID, branchIDFilter)
 	if err != nil {
@@ -60,12 +68,19 @@ func (h *Handler) List(c *fiber.Ctx) error {
 func (h *Handler) Search(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)
 	var branchIDFilter *uuid.UUID
-	if bid := c.Query("branch_id"); bid != "" {
-		parsed, err := uuid.Parse(bid)
-		if err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": "invalid branch_id"})
+	if auth.Role == "owner" {
+		if bid := c.Query("branch_id"); bid != "" {
+			parsed, err := uuid.Parse(bid)
+			if err != nil {
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": "invalid branch_id"})
+			}
+			branchIDFilter = &parsed
 		}
-		branchIDFilter = &parsed
+	} else {
+		if auth.BranchID == nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": "branch not assigned"})
+		}
+		branchIDFilter = auth.BranchID
 	}
 	tables, err := h.svc.Search(auth.BusinessID, c.Query("q"), branchIDFilter, c.Query("status"))
 	if err != nil {
@@ -88,11 +103,34 @@ func (h *Handler) Search(c *fiber.Ctx) error {
 //	@Router			/tables [post]
 func (h *Handler) Create(c *fiber.Ctx) error {
 	auth := c.Locals("auth").(middleware.AuthContext)
-	var input CreateTableInput
-	if err := c.BodyParser(&input); err != nil {
+	
+	// CreateTable requires branch_id but we just parse it from body uniquely for Owner manually!
+	// Wait, the prompt states: Create table is owner-only, so branch_id stays in request body!
+	// However I already removed it from CreateTableInput structure to keep service clean!
+	// So let's parse branch_id explicitly natively!
+	var payload struct {
+		BranchID uuid.UUID `json:"branch_id"`
+		Name     string    `json:"name"`
+		QRCode   string    `json:"qr_code"`
+	}
+	if err := c.BodyParser(&payload); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": "invalid request body"})
 	}
-	t, err := h.svc.Create(auth.BusinessID, input)
+
+	var branchID uuid.UUID
+	if auth.Role == "owner" {
+		branchID = payload.BranchID
+	} else {
+		if auth.BranchID == nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": "branch not assigned to your account"})
+		}
+		branchID = *auth.BranchID
+	}
+
+	t, err := h.svc.Create(auth.BusinessID, branchID, CreateTableInput{
+		Name:   payload.Name,
+		QRCode: payload.QRCode,
+	})
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": err.Error()})
 	}
