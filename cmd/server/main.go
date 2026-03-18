@@ -51,7 +51,7 @@ func main() {
 	businessSvc := business.NewService(db)
 	branchSvc := branch.NewService(db)
 	staffSvc := staff.NewService(db)
-	menuSvc := menu.NewService(db)
+	menuSvc := menu.NewService(db, &config.App)
 	modifierSvc := modifier.NewService(db)
 	tableSvc := table.NewService(db)
 	orderSvc := order.NewService(db)
@@ -140,6 +140,7 @@ func main() {
 	menuRoute := api.Group("/menu", authMW, middleware.RequireOwner())
 	menuRoute.Post("/", menuHdlr.Create)
 	menuRoute.Patch("/:id", menuHdlr.Update)
+	menuRoute.Post("/:id/image", menuHdlr.UploadImage)
 
 	// ── MODIFIERS [auth + owner] ──
 	modifierRoute := api.Group("/modifiers", authMW, middleware.RequireOwner())

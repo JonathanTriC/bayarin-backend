@@ -135,3 +135,50 @@ func (h *Handler) Update(c *fiber.Ctx) error {
 	}
 	return c.JSON(fiber.Map{"success": true, "data": m})
 }
+
+// UploadImage godoc
+//
+//	@Summary		Upload menu item image
+//	@Description	Upload or replace the image for a menu item. Accepts PNG or JPG only (max 5MB). Returns updated menu item with image_url.
+//	@Tags			menu
+//	@Accept			multipart/form-data
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id		path		string					true	"Menu item UUID"
+//	@Param			image	formData	file					true	"Menu image file (PNG or JPG, max 5MB)"
+//	@Success		200		{object}	map[string]interface{}	"Returns updated menu item"
+//	@Failure		400		{object}	httputil.Error400Response "Invalid file or menu item not found"
+//	@Failure		401		{object}	httputil.Error401Response "Unauthorized"
+//	@Failure		403		{object}	httputil.Error403Response "Forbidden - owner only"
+//	@Router			/menu/{id}/image [post]
+func (h *Handler) UploadImage(c *fiber.Ctx) error {
+	auth := c.Locals("auth").(middleware.AuthContext)
+	itemID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": "invalid menu item id"})
+	}
+
+	fileHeader, err := c.FormFile("image")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": "image file is required"})
+	}
+
+	f, err := fileHeader.Open()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"success": false, "error": "failed to open file"})
+	}
+	defer f.Close()
+
+	fileBytes := make([]byte, fileHeader.Size)
+	if _, err := f.Read(fileBytes); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"success": false, "error": "failed to read file"})
+	}
+
+	m, err := h.svc.UploadMenuItemImage(c.Context(), itemID, auth.BusinessID, fileBytes, fileHeader.Filename, fileHeader.Size)
+	if err != nil {
+		// Differentiate slightly by returning 400 for structural errors
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": err.Error()})
+	}
+
+	return c.JSON(fiber.Map{"success": true, "data": m})
+}

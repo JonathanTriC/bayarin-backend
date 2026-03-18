@@ -27,3 +27,9 @@ SET
 WHERE id          = $1
   AND business_id = $7
 RETURNING *;
+
+-- name: UpdateMenuItemImage :one
+UPDATE menu_items
+SET image_url = $3
+WHERE id = $1 AND business_id = $2
+RETURNING *;

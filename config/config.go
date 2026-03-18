@@ -14,6 +14,7 @@ type Config struct {
 	SupabaseURL            string
 	SupabaseServiceRoleKey string
 	SupabaseStorageBucket  string
+	SupabaseMenuBucket     string
 }
 
 var App Config
@@ -29,7 +30,8 @@ func Load() {
 		Port:                   getEnv("PORT", "8080"),
 		SupabaseURL:            getEnv("SUPABASE_URL", ""),
 		SupabaseServiceRoleKey: getEnv("SUPABASE_SERVICE_ROLE_KEY", ""),
-		SupabaseStorageBucket:  getEnv("SUPABASE_STORAGE_BUCKET", ""),
+		SupabaseStorageBucket:  getEnv("SUPABASE_QRIS_BUCKET", ""),
+		SupabaseMenuBucket:     getEnv("SUPABASE_MENU_BUCKET", ""),
 	}
 }
 

@@ -66,6 +66,7 @@ CREATE TABLE menu_items (
     price        NUMERIC(12, 2) NOT NULL DEFAULT 0,
     category     TEXT NOT NULL DEFAULT '',
     is_available BOOLEAN NOT NULL DEFAULT true,
+    image_url    TEXT,
     created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

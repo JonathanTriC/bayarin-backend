@@ -7,6 +7,7 @@ package sqlcgen
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
@@ -14,7 +15,7 @@ import (
 const createMenuItem = `-- name: CreateMenuItem :one
 INSERT INTO menu_items (business_id, name, description, price, category, is_available)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, business_id, name, description, price, category, is_available, created_at
+RETURNING id, business_id, name, description, price, category, is_available, image_url, created_at
 `
 
 type CreateMenuItemParams struct {
@@ -44,13 +45,14 @@ func (q *Queries) CreateMenuItem(ctx context.Context, arg CreateMenuItemParams) 
 		&i.Price,
 		&i.Category,
 		&i.IsAvailable,
+		&i.ImageUrl,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getMenuItemByID = `-- name: GetMenuItemByID :one
-SELECT id, business_id, name, description, price, category, is_available, created_at
+SELECT id, business_id, name, description, price, category, is_available, image_url, created_at
 FROM menu_items
 WHERE id          = $1
   AND business_id = $2
@@ -73,13 +75,14 @@ func (q *Queries) GetMenuItemByID(ctx context.Context, arg GetMenuItemByIDParams
 		&i.Price,
 		&i.Category,
 		&i.IsAvailable,
+		&i.ImageUrl,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const listMenuItems = `-- name: ListMenuItems :many
-SELECT id, business_id, name, description, price, category, is_available, created_at
+SELECT id, business_id, name, description, price, category, is_available, image_url, created_at
 FROM menu_items
 WHERE business_id = $1
 ORDER BY category ASC, name ASC
@@ -102,6 +105,7 @@ func (q *Queries) ListMenuItems(ctx context.Context, businessID uuid.UUID) ([]Me
 			&i.Price,
 			&i.Category,
 			&i.IsAvailable,
+			&i.ImageUrl,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -127,7 +131,7 @@ SET
     is_available = COALESCE($6, is_available)
 WHERE id          = $1
   AND business_id = $7
-RETURNING id, business_id, name, description, price, category, is_available, created_at
+RETURNING id, business_id, name, description, price, category, is_available, image_url, created_at
 `
 
 type UpdateMenuItemParams struct {
@@ -159,6 +163,37 @@ func (q *Queries) UpdateMenuItem(ctx context.Context, arg UpdateMenuItemParams) 
 		&i.Price,
 		&i.Category,
 		&i.IsAvailable,
+		&i.ImageUrl,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const updateMenuItemImage = `-- name: UpdateMenuItemImage :one
+UPDATE menu_items
+SET image_url = $3
+WHERE id = $1 AND business_id = $2
+RETURNING id, business_id, name, description, price, category, is_available, image_url, created_at
+`
+
+type UpdateMenuItemImageParams struct {
+	ID         uuid.UUID      `json:"id"`
+	BusinessID uuid.UUID      `json:"business_id"`
+	ImageUrl   sql.NullString `json:"image_url"`
+}
+
+func (q *Queries) UpdateMenuItemImage(ctx context.Context, arg UpdateMenuItemImageParams) (MenuItem, error) {
+	row := q.db.QueryRowContext(ctx, updateMenuItemImage, arg.ID, arg.BusinessID, arg.ImageUrl)
+	var i MenuItem
+	err := row.Scan(
+		&i.ID,
+		&i.BusinessID,
+		&i.Name,
+		&i.Description,
+		&i.Price,
+		&i.Category,
+		&i.IsAvailable,
+		&i.ImageUrl,
 		&i.CreatedAt,
 	)
 	return i, err

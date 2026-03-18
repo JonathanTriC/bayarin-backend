@@ -1,11 +1,14 @@
 package menu
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/bayarin/backend/config"
+	"github.com/bayarin/backend/internal/db/sqlcgen"
 	"github.com/google/uuid"
 )
 
@@ -18,6 +21,7 @@ type MenuItem struct {
 	Price       float64   `json:"price"`
 	Category    string    `json:"category"`
 	IsAvailable bool      `json:"is_available"`
+	ImageURL    *string   `json:"image_url,omitempty"`
 	CreatedAt   string    `json:"created_at"`
 }
 
@@ -44,6 +48,7 @@ type MenuItemResponse struct {
 	Price       float64                 `json:"price"`
 	Category    string                  `json:"category"`
 	IsAvailable bool                    `json:"is_available"`
+	ImageURL    *string                 `json:"image_url,omitempty"`
 	Modifiers   []ModifierGroupResponse `json:"modifiers"`
 	CreatedAt   string                  `json:"created_at"`
 }
@@ -70,11 +75,14 @@ type UpdateMenuItemInput struct {
 
 // Service handles menu item operations.
 type Service struct {
-	db *sql.DB
+	db  *sql.DB
+	cfg *config.Config
 }
 
 // NewService creates a new menu service.
-func NewService(db *sql.DB) *Service { return &Service{db: db} }
+func NewService(db *sql.DB, cfg *config.Config) *Service {
+	return &Service{db: db, cfg: cfg}
+}
 
 func (s *Service) getModifiersOptions(menuItemID uuid.UUID) ([]ModifierGroupResponse, error) {
 	rows, err := s.db.Query(`
@@ -137,7 +145,7 @@ func (s *Service) getModifiersOptions(menuItemID uuid.UUID) ([]ModifierGroupResp
 // List returns all menu items for the given business.
 func (s *Service) List(businessID uuid.UUID) ([]MenuItemResponse, error) {
 	rows, err := s.db.Query(
-		`SELECT id, business_id, name, description, price, category, is_available, created_at
+		`SELECT id, business_id, name, description, price, category, is_available, image_url, created_at
 		 FROM menu_items WHERE business_id = $1 ORDER BY category, name`, businessID)
 	if err != nil {
 		return nil, fmt.Errorf("list menu items: %w", err)
@@ -147,7 +155,7 @@ func (s *Service) List(businessID uuid.UUID) ([]MenuItemResponse, error) {
 	var items []MenuItemResponse
 	for rows.Next() {
 		var m MenuItemResponse
-		if err := rows.Scan(&m.ID, &m.BusinessID, &m.Name, &m.Description, &m.Price, &m.Category, &m.IsAvailable, &m.CreatedAt); err != nil {
+		if err := rows.Scan(&m.ID, &m.BusinessID, &m.Name, &m.Description, &m.Price, &m.Category, &m.IsAvailable, &m.ImageURL, &m.CreatedAt); err != nil {
 			return nil, err
 		}
 
@@ -183,9 +191,9 @@ func (s *Service) Create(businessID uuid.UUID, input CreateMenuItemInput) (*Menu
 	err = tx.QueryRow(
 		`INSERT INTO menu_items (business_id, name, description, price, category, is_available)
 		 VALUES ($1, $2, $3, $4, $5, $6)
-		 RETURNING id, business_id, name, description, price, category, is_available, created_at`,
+		 RETURNING id, business_id, name, description, price, category, is_available, image_url, created_at`,
 		businessID, input.Name, input.Description, input.Price, input.Category, input.IsAvailable,
-	).Scan(&m.ID, &m.BusinessID, &m.Name, &m.Description, &m.Price, &m.Category, &m.IsAvailable, &m.CreatedAt)
+	).Scan(&m.ID, &m.BusinessID, &m.Name, &m.Description, &m.Price, &m.Category, &m.IsAvailable, &m.ImageURL, &m.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("create menu item: %w", err)
 	}
@@ -233,9 +241,9 @@ func (s *Service) Update(businessID, itemID uuid.UUID, input UpdateMenuItemInput
 
 	var m MenuItemResponse
 	row := tx.QueryRow(
-		`SELECT id, business_id, name, description, price, category, is_available, created_at
+		`SELECT id, business_id, name, description, price, category, is_available, image_url, created_at
 		 FROM menu_items WHERE id = $1 AND business_id = $2`, itemID, businessID)
-	if err := row.Scan(&m.ID, &m.BusinessID, &m.Name, &m.Description, &m.Price, &m.Category, &m.IsAvailable, &m.CreatedAt); err != nil {
+	if err := row.Scan(&m.ID, &m.BusinessID, &m.Name, &m.Description, &m.Price, &m.Category, &m.IsAvailable, &m.ImageURL, &m.CreatedAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, errors.New("menu item not found")
 		}
@@ -311,7 +319,7 @@ func (s *Service) Search(businessID uuid.UUID, query, category string) ([]MenuIt
 	like := "%" + strings.TrimSpace(query) + "%"
 	args := []interface{}{businessID, like}
 
-	sqlStr := `SELECT id, business_id, name, description, price, category, is_available, created_at
+	sqlStr := `SELECT id, business_id, name, description, price, category, is_available, image_url, created_at
 	           FROM menu_items
 	           WHERE business_id = $1 AND (name ILIKE $2 OR description ILIKE $2)`
 
@@ -330,7 +338,7 @@ func (s *Service) Search(businessID uuid.UUID, query, category string) ([]MenuIt
 	var items []MenuItemResponse
 	for rows.Next() {
 		var m MenuItemResponse
-		if err := rows.Scan(&m.ID, &m.BusinessID, &m.Name, &m.Description, &m.Price, &m.Category, &m.IsAvailable, &m.CreatedAt); err != nil {
+		if err := rows.Scan(&m.ID, &m.BusinessID, &m.Name, &m.Description, &m.Price, &m.Category, &m.IsAvailable, &m.ImageURL, &m.CreatedAt); err != nil {
 			return nil, err
 		}
 		mods, err := s.getModifiersOptions(m.ID)
@@ -373,4 +381,79 @@ func (s *Service) Categories(businessID uuid.UUID) ([]string, error) {
 		categories = []string{}
 	}
 	return categories, nil
+}
+
+// UploadMenuItemImage handles image validation, upload, and updating the database.
+func (s *Service) UploadMenuItemImage(ctx context.Context, itemID, businessID uuid.UUID, fileData []byte, filename string, fileSize int64) (*MenuItemResponse, error) {
+	// 1. Validate file extension
+	ext := strings.ToLower(filename[strings.LastIndex(filename, "."):])
+	if ext != ".jpg" && ext != ".jpeg" && ext != ".png" {
+		return nil, errors.New("only JPG and PNG images are allowed")
+	}
+
+	// 2. Validate file size (max 5MB)
+	if fileSize > 5*1024*1024 {
+		return nil, errors.New("image file must not exceed 5MB")
+	}
+
+	// 3. Check menu item exists
+	var m MenuItemResponse
+	err := s.db.QueryRow(`
+		SELECT id, business_id, name, description, price, category, is_available, image_url, created_at
+		FROM menu_items WHERE id = $1 AND business_id = $2
+	`, itemID, businessID).Scan(&m.ID, &m.BusinessID, &m.Name, &m.Description, &m.Price, &m.Category, &m.IsAvailable, &m.ImageURL, &m.CreatedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.New("menu item not found")
+		}
+		return nil, fmt.Errorf("query menu item: %w", err)
+	}
+
+	// 4. Delete old image if present
+	if m.ImageURL != nil && *m.ImageURL != "" {
+		// Public url format: {SUPABASE_URL}/storage/v1/object/public/{bucket}/{path}
+		parts := strings.Split(*m.ImageURL, "/public/"+s.cfg.SupabaseMenuBucket+"/")
+		if len(parts) == 2 {
+			oldPath := parts[1]
+			_ = DeleteMenuImage(s.cfg, oldPath) // best effort
+		}
+	}
+
+	// 5. Generate storage path
+	newID := uuid.New()
+	storagePath := fmt.Sprintf("menu/%s/%s/%s%s", businessID.String(), itemID.String(), newID.String(), ext)
+
+	// 6. Determine content type
+	contentType := "image/jpeg"
+	if ext == ".png" {
+		contentType = "image/png"
+	}
+
+	// 7. Upload to Supabase
+	publicURL, err := UploadMenuImage(s.cfg, storagePath, fileData, contentType)
+	if err != nil {
+		return nil, fmt.Errorf("failed to upload image: %w", err)
+	}
+
+	// 8. Update database using sqlc generated query (here we use raw SQL to keep transactions tight or call sqlc)
+	queries := sqlcgen.New(s.db)
+	_, err = queries.UpdateMenuItemImage(ctx, sqlcgen.UpdateMenuItemImageParams{
+		ID:         itemID,
+		BusinessID: businessID,
+		ImageUrl:   sql.NullString{String: publicURL, Valid: true},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("update menu item image: %w", err)
+	}
+
+	// 9. Fetch and return full MenuItemResponse
+	m.ImageURL = &publicURL
+
+	mods, _ := s.getModifiersOptions(m.ID)
+	if mods == nil {
+		mods = []ModifierGroupResponse{}
+	}
+	m.Modifiers = mods
+
+	return &m, nil
 }

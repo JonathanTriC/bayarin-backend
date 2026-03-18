@@ -681,6 +681,69 @@ const docTemplate = `{
                 }
             }
         },
+        "/menu/{id}/image": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Upload or replace the image for a menu item. Accepts PNG or JPG only (max 5MB). Returns updated menu item with image_url.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "menu"
+                ],
+                "summary": "Upload menu item image",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Menu item UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Menu image file (PNG or JPG, max 5MB)",
+                        "name": "image",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Returns updated menu item",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid file or menu item not found",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error400Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error401Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - owner only",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error403Response"
+                        }
+                    }
+                }
+            }
+        },
         "/modifiers": {
             "get": {
                 "security": [
@@ -2160,6 +2223,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "id": {
+                    "type": "string"
+                },
+                "image_url": {
                     "type": "string"
                 },
                 "is_available": {

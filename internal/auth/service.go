@@ -76,12 +76,35 @@ func (s *Service) RegisterOwner(input RegisterOwnerInput) (*UserResponse, error)
 	defer tx.Rollback() //nolint:errcheck
 
 	var businessID uuid.UUID
-	err = tx.QueryRow(
-		`INSERT INTO businesses (name, slug) VALUES ($1, $2) RETURNING id`,
-		input.BusinessName, slug,
-	).Scan(&businessID)
-	if err != nil {
+	
+	for i := 0; i < 5; i++ {
+		err = tx.QueryRow(
+			`INSERT INTO businesses (name, slug) VALUES ($1, $2) RETURNING id`,
+			input.BusinessName, slug,
+		).Scan(&businessID)
+		
+		if err == nil {
+			break // Success
+		}
+		
+		if strings.Contains(err.Error(), "businesses_slug_key") {
+			// Append random string to the base slug
+			slug = fmt.Sprintf("%s-%s", slugify(input.BusinessName), uuid.New().String()[:6])
+			// Rollback and begin anew for the next iteration since transaction aborted
+			tx.Rollback()
+			tx, err = s.db.Begin()
+			if err != nil {
+				return nil, fmt.Errorf("begin tx retry: %w", err)
+			}
+			defer tx.Rollback() //nolint:errcheck
+			continue
+		}
+		
 		return nil, fmt.Errorf("insert business: %w", err)
+	}
+	
+	if err != nil {
+		return nil, errors.New("failed to generate unique business slug after 5 attempts")
 	}
 
 	var userID uuid.UUID

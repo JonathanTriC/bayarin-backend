@@ -5,6 +5,7 @@
 package sqlcgen
 
 import (
+	"database/sql"
 	"database/sql/driver"
 	"fmt"
 	"time"
@@ -253,14 +254,15 @@ type Business struct {
 }
 
 type MenuItem struct {
-	ID          uuid.UUID `json:"id"`
-	BusinessID  uuid.UUID `json:"business_id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Price       string    `json:"price"`
-	Category    string    `json:"category"`
-	IsAvailable bool      `json:"is_available"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID          uuid.UUID      `json:"id"`
+	BusinessID  uuid.UUID      `json:"business_id"`
+	Name        string         `json:"name"`
+	Description string         `json:"description"`
+	Price       string         `json:"price"`
+	Category    string         `json:"category"`
+	IsAvailable bool           `json:"is_available"`
+	ImageUrl    sql.NullString `json:"image_url"`
+	CreatedAt   time.Time      `json:"created_at"`
 }
 
 type MenuItemModifier struct {
