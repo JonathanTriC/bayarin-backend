@@ -1649,6 +1649,136 @@ paths:
       summary: Upload static QRIS
       tags:
       - qris
+  /shifts/{id}/report:
+    get:
+      description: Returns full report for a specific shift including stats and top
+        items
+      parameters:
+      - description: Shift UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Shift report
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Shift not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get shift report
+      tags:
+      - shifts
+  /shifts/branch:
+    get:
+      description: Owner views all shifts across all cashiers for a branch (last 100)
+      parameters:
+      - description: Branch UUID
+        in: query
+        name: branch_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of branch shifts
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden - owner only
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List branch shifts
+      tags:
+      - shifts
+  /shifts/close:
+    post:
+      description: Cashier closes their active shift. Returns full shift report with
+        stats.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Shift closed with report
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: No open shift found
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Close shift
+      tags:
+      - shifts
+  /shifts/my:
+    get:
+      description: Returns the last 50 shifts for the authenticated cashier
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of shifts
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List my shifts
+      tags:
+      - shifts
+  /shifts/open:
+    post:
+      description: Cashier opens a new shift. Only one active shift allowed per cashier
+        per branch.
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Shift opened
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Already have an open shift
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Open shift
+      tags:
+      - shifts
   /staff:
     get:
       description: Returns all staff members for the authenticated owner's business

@@ -17,6 +17,7 @@ import (
 	"github.com/bayarin/backend/internal/payment"
 	"github.com/bayarin/backend/internal/qris"
 	"github.com/bayarin/backend/internal/receipt"
+	"github.com/bayarin/backend/internal/shift"
 	"github.com/bayarin/backend/internal/staff"
 	"github.com/bayarin/backend/internal/table"
 	_ "github.com/bayarin/backend/docs"
@@ -60,6 +61,7 @@ func main() {
 	dashboardSvc := dashboard.NewService(db)
 	qrisSvc := qris.NewService(db, &config.App)
 	receiptSvc := receipt.NewService(db)
+	shiftSvc := shift.NewService(db)
 
 	// Initialise handlers.
 	authHdlr := auth.NewHandler(authSvc)
@@ -74,6 +76,7 @@ func main() {
 	dashboardHdlr := dashboard.NewHandler(dashboardSvc)
 	qrisHdlr := qris.NewHandler(qrisSvc)
 	receiptHdlr := receipt.NewHandler(receiptSvc)
+	shiftHdlr := shift.NewHandler(shiftSvc)
 
 	// Create Fiber app.
 	app := fiber.New(fiber.Config{
@@ -193,6 +196,14 @@ func main() {
 	qrisRoute.Post("/upload", middleware.RequireOwner(), qrisHdlr.Upload)
 	qrisRoute.Post("/generate", middleware.RequireCashierOrOwner(), qrisHdlr.Generate)
 	qrisRoute.Get("/history", middleware.RequireOwner(), qrisHdlr.History)
+
+	// ── SHIFTS [auth + mixed] ──
+	shifts := api.Group("/shifts", authMW)
+	shifts.Post("/open", middleware.RequireCashierOrOwner(), shiftHdlr.OpenShift)
+	shifts.Post("/close", middleware.RequireCashierOrOwner(), shiftHdlr.CloseShift)
+	shifts.Get("/my", middleware.RequireCashierOrOwner(), shiftHdlr.ListMyShifts)
+	shifts.Get("/branch", middleware.RequireOwner(), shiftHdlr.ListBranchShifts)
+	shifts.Get("/:id/report", middleware.RequireCashierOrOwner(), shiftHdlr.GetShiftReport)
 
 	// ── Swagger UI ──
 	app.Get("/swagger/*", swagger.HandlerDefault)

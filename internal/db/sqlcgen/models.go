@@ -339,6 +339,23 @@ type Session struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type Shift struct {
+	ID              uuid.UUID      `json:"id"`
+	BusinessID      uuid.UUID      `json:"business_id"`
+	BranchID        uuid.UUID      `json:"branch_id"`
+	CashierID       uuid.UUID      `json:"cashier_id"`
+	StartedAt       time.Time      `json:"started_at"`
+	EndedAt         sql.NullTime   `json:"ended_at"`
+	IsOpen          bool           `json:"is_open"`
+	TotalOrders     sql.NullInt32  `json:"total_orders"`
+	TotalRevenue    sql.NullString `json:"total_revenue"`
+	CashRevenue     sql.NullString `json:"cash_revenue"`
+	QrisRevenue     sql.NullString `json:"qris_revenue"`
+	TransferRevenue sql.NullString `json:"transfer_revenue"`
+	CancelledOrders sql.NullInt32  `json:"cancelled_orders"`
+	CreatedAt       time.Time      `json:"created_at"`
+}
+
 type Table struct {
 	ID           uuid.UUID      `json:"id"`
 	BranchID     uuid.UUID      `json:"branch_id"`

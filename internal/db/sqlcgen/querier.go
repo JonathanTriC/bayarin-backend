@@ -13,6 +13,7 @@ import (
 type Querier interface {
 	AddOrderItem(ctx context.Context, arg AddOrderItemParams) (OrderItem, error)
 	AddOrderItemModifier(ctx context.Context, arg AddOrderItemModifierParams) (OrderItemModifier, error)
+	CloseShift(ctx context.Context, arg CloseShiftParams) (Shift, error)
 	CreateBranch(ctx context.Context, arg CreateBranchParams) (Branch, error)
 	CreateBusiness(ctx context.Context, arg CreateBusinessParams) (Business, error)
 	CreateMenuItem(ctx context.Context, arg CreateMenuItemParams) (MenuItem, error)
@@ -32,6 +33,8 @@ type Querier interface {
 	GetActiveBranchQRIS(ctx context.Context, branchID uuid.UUID) (BranchQri, error)
 	GetActiveOrderByTable(ctx context.Context, tableID uuid.NullUUID) (uuid.UUID, error)
 	GetBranchByID(ctx context.Context, arg GetBranchByIDParams) (Branch, error)
+	// Aggregate for all cashiers in a branch within a time range
+	GetBranchShiftOrderStats(ctx context.Context, arg GetBranchShiftOrderStatsParams) (GetBranchShiftOrderStatsRow, error)
 	GetBusiness(ctx context.Context, id uuid.UUID) (Business, error)
 	GetCashierDashboard(ctx context.Context, arg GetCashierDashboardParams) (GetCashierDashboardRow, error)
 	GetMenuItemByID(ctx context.Context, arg GetMenuItemByIDParams) (MenuItem, error)
@@ -40,6 +43,7 @@ type Querier interface {
 	GetModifierGroupsWithOptionsByMenuItem(ctx context.Context, menuItemID uuid.UUID) ([]GetModifierGroupsWithOptionsByMenuItemRow, error)
 	GetModifierOptionByID(ctx context.Context, id uuid.UUID) (ModifierOption, error)
 	GetNextOrderNumber(ctx context.Context, branchID uuid.UUID) (int32, error)
+	GetOpenShiftByCashier(ctx context.Context, arg GetOpenShiftByCashierParams) (Shift, error)
 	GetOrderByID(ctx context.Context, arg GetOrderByIDParams) (Order, error)
 	GetOrderByIDForUpdate(ctx context.Context, arg GetOrderByIDForUpdateParams) (Order, error)
 	GetOrderItemByID(ctx context.Context, arg GetOrderItemByIDParams) (OrderItem, error)
@@ -50,6 +54,11 @@ type Querier interface {
 	GetReceiptItems(ctx context.Context, orderID uuid.UUID) ([]GetReceiptItemsRow, error)
 	GetRevenuePerBranch(ctx context.Context, businessID uuid.UUID) ([]GetRevenuePerBranchRow, error)
 	GetSessionByToken(ctx context.Context, token string) (Session, error)
+	GetShiftByID(ctx context.Context, arg GetShiftByIDParams) (Shift, error)
+	// Aggregate orders within shift time range for a cashier
+	GetShiftOrderStats(ctx context.Context, arg GetShiftOrderStatsParams) (GetShiftOrderStatsRow, error)
+	// Top 5 selling items within shift time range
+	GetShiftTopItems(ctx context.Context, arg GetShiftTopItemsParams) ([]GetShiftTopItemsRow, error)
 	GetStaffByID(ctx context.Context, arg GetStaffByIDParams) (User, error)
 	GetTableByID(ctx context.Context, arg GetTableByIDParams) (Table, error)
 	GetTableByIDForUpdate(ctx context.Context, id uuid.UUID) (Table, error)
@@ -67,10 +76,13 @@ type Querier interface {
 	ListOrderItems(ctx context.Context, orderID uuid.UUID) ([]OrderItem, error)
 	ListOrdersByStatus(ctx context.Context, arg ListOrdersByStatusParams) ([]Order, error)
 	ListOrdersByStatusAndBranch(ctx context.Context, arg ListOrdersByStatusAndBranchParams) ([]Order, error)
+	ListShiftsByBranch(ctx context.Context, arg ListShiftsByBranchParams) ([]ListShiftsByBranchRow, error)
+	ListShiftsByCashier(ctx context.Context, arg ListShiftsByCashierParams) ([]Shift, error)
 	ListStaff(ctx context.Context, businessID uuid.UUID) ([]User, error)
 	ListTables(ctx context.Context, arg ListTablesParams) ([]Table, error)
 	ListTablesByBranch(ctx context.Context, branchID uuid.UUID) ([]Table, error)
 	ListTablesByBusiness(ctx context.Context, businessID uuid.UUID) ([]Table, error)
+	OpenShift(ctx context.Context, arg OpenShiftParams) (Shift, error)
 	RevokeSession(ctx context.Context, token string) error
 	SetTableAvailable(ctx context.Context, id uuid.UUID) (Table, error)
 	SetTableOccupied(ctx context.Context, id uuid.UUID) (Table, error)

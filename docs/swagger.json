@@ -1682,6 +1682,203 @@
                 }
             }
         },
+        "/shifts/branch": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Owner views all shifts across all cashiers for a branch (last 100)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "shifts"
+                ],
+                "summary": "List branch shifts",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Branch UUID",
+                        "name": "branch_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of branch shifts",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - owner only",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/shifts/close": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cashier closes their active shift. Returns full shift report with stats.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "shifts"
+                ],
+                "summary": "Close shift",
+                "responses": {
+                    "200": {
+                        "description": "Shift closed with report",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "No open shift found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/shifts/my": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the last 50 shifts for the authenticated cashier",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "shifts"
+                ],
+                "summary": "List my shifts",
+                "responses": {
+                    "200": {
+                        "description": "List of shifts",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/shifts/open": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cashier opens a new shift. Only one active shift allowed per cashier per branch.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "shifts"
+                ],
+                "summary": "Open shift",
+                "responses": {
+                    "201": {
+                        "description": "Shift opened",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Already have an open shift",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/shifts/{id}/report": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns full report for a specific shift including stats and top items",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "shifts"
+                ],
+                "summary": "Get shift report",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Shift UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Shift report",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Shift not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/staff": {
             "get": {
                 "security": [
