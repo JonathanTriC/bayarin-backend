@@ -25,9 +25,11 @@ type Querier interface {
 	CreateTable(ctx context.Context, arg CreateTableParams) (Table, error)
 	CreateTransaction(ctx context.Context, arg CreateTransactionParams) (Transaction, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	DeactivateBranchQRIS(ctx context.Context, branchID uuid.UUID) error
 	DeleteMenuItemModifiers(ctx context.Context, menuItemID uuid.UUID) error
 	DeleteOrderItem(ctx context.Context, arg DeleteOrderItemParams) error
 	DeleteOrderItemModifiers(ctx context.Context, orderItemID uuid.UUID) error
+	GetActiveBranchQRIS(ctx context.Context, branchID uuid.UUID) (BranchQri, error)
 	GetBranchByID(ctx context.Context, arg GetBranchByIDParams) (Branch, error)
 	GetBusiness(ctx context.Context, id uuid.UUID) (Business, error)
 	GetCashierDashboard(ctx context.Context, arg GetCashierDashboardParams) (GetCashierDashboardRow, error)
@@ -48,7 +50,9 @@ type Querier interface {
 	GetTopMenuItems(ctx context.Context, businessID uuid.UUID) ([]GetTopMenuItemsRow, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
+	InsertBranchQRIS(ctx context.Context, arg InsertBranchQRISParams) (BranchQri, error)
 	LinkModifierGroupToMenuItem(ctx context.Context, arg LinkModifierGroupToMenuItemParams) error
+	ListBranchQRISHistory(ctx context.Context, branchID uuid.UUID) ([]BranchQri, error)
 	ListBranches(ctx context.Context, businessID uuid.UUID) ([]Branch, error)
 	ListMenuItems(ctx context.Context, businessID uuid.UUID) ([]MenuItem, error)
 	ListModifierGroups(ctx context.Context, businessID uuid.UUID) ([]ModifierGroup, error)

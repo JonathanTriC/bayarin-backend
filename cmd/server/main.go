@@ -15,6 +15,7 @@ import (
 	"github.com/bayarin/backend/internal/modifier"
 	"github.com/bayarin/backend/internal/order"
 	"github.com/bayarin/backend/internal/payment"
+	"github.com/bayarin/backend/internal/qris"
 	"github.com/bayarin/backend/internal/staff"
 	"github.com/bayarin/backend/internal/table"
 	_ "github.com/bayarin/backend/docs"
@@ -56,6 +57,7 @@ func main() {
 	orderSvc := order.NewService(db)
 	paymentSvc := payment.NewService(db)
 	dashboardSvc := dashboard.NewService(db)
+	qrisSvc := qris.NewService(db, &config.App)
 
 	// Initialise handlers.
 	authHdlr := auth.NewHandler(authSvc)
@@ -68,6 +70,7 @@ func main() {
 	orderHdlr := order.NewHandler(orderSvc)
 	paymentHdlr := payment.NewHandler(paymentSvc)
 	dashboardHdlr := dashboard.NewHandler(dashboardSvc)
+	qrisHdlr := qris.NewHandler(qrisSvc)
 
 	// Create Fiber app.
 	app := fiber.New(fiber.Config{
@@ -172,6 +175,12 @@ func main() {
 	dash := api.Group("/dashboard", authMW)
 	dash.Get("/owner", middleware.RequireOwner(), dashboardHdlr.OwnerDashboard)
 	dash.Get("/cashier", middleware.RequireCashierOrOwner(), dashboardHdlr.CashierDashboard)
+
+	// ── QRIS [auth + mixed] ──
+	qrisRoute := api.Group("/qris", authMW)
+	qrisRoute.Post("/upload", middleware.RequireOwner(), qrisHdlr.Upload)
+	qrisRoute.Post("/generate", middleware.RequireCashierOrOwner(), qrisHdlr.Generate)
+	qrisRoute.Get("/history", middleware.RequireOwner(), qrisHdlr.History)
 
 	// ── Swagger UI ──
 	app.Get("/swagger/*", swagger.HandlerDefault)

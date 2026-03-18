@@ -8,9 +8,12 @@ import (
 )
 
 type Config struct {
-	DatabaseURL string
-	JWTSecret   string
-	Port        string
+	DatabaseURL            string
+	JWTSecret              string
+	Port                   string
+	SupabaseURL            string
+	SupabaseServiceRoleKey string
+	SupabaseStorageBucket  string
 }
 
 var App Config
@@ -21,9 +24,12 @@ func Load() {
 	}
 
 	App = Config{
-		DatabaseURL: getEnv("DATABASE_URL", "postgres://localhost:5432/bayarin?sslmode=disable"),
-		JWTSecret:   getEnv("JWT_SECRET", "change-me-in-production"),
-		Port:        getEnv("PORT", "8080"),
+		DatabaseURL:            getEnv("DATABASE_URL", "postgres://localhost:5432/bayarin?sslmode=disable"),
+		JWTSecret:              getEnv("JWT_SECRET", "change-me-in-production"),
+		Port:                   getEnv("PORT", "8080"),
+		SupabaseURL:            getEnv("SUPABASE_URL", ""),
+		SupabaseServiceRoleKey: getEnv("SUPABASE_SERVICE_ROLE_KEY", ""),
+		SupabaseStorageBucket:  getEnv("SUPABASE_STORAGE_BUCKET", ""),
 	}
 }
 

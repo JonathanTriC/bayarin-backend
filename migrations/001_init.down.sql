@@ -1,4 +1,5 @@
 -- Drop tables in reverse dependency order
+DROP TABLE IF EXISTS branch_qris;
 DROP TABLE IF EXISTS menu_item_modifiers;
 DROP TABLE IF EXISTS transactions;
 DROP TABLE IF EXISTS payments;

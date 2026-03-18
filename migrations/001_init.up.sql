@@ -179,3 +179,17 @@ CREATE TABLE menu_item_modifiers (
 
 CREATE INDEX idx_menu_item_modifiers_menu  ON menu_item_modifiers(menu_item_id);
 CREATE INDEX idx_menu_item_modifiers_group ON menu_item_modifiers(modifier_group_id);
+
+-- branch_qris
+CREATE TABLE branch_qris (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    branch_id   UUID NOT NULL REFERENCES branches(id),
+    qris_string TEXT NOT NULL,
+    image_path  TEXT NOT NULL,
+    uploaded_by UUID REFERENCES users(id),
+    is_active   BOOLEAN NOT NULL DEFAULT true,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_branch_qris_branch ON branch_qris(branch_id);
+CREATE INDEX idx_branch_qris_active ON branch_qris(branch_id, is_active);

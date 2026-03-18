@@ -233,6 +233,16 @@ type Branch struct {
 	CreatedAt  time.Time `json:"created_at"`
 }
 
+type BranchQri struct {
+	ID         uuid.UUID     `json:"id"`
+	BranchID   uuid.UUID     `json:"branch_id"`
+	QrisString string        `json:"qris_string"`
+	ImagePath  string        `json:"image_path"`
+	UploadedBy uuid.NullUUID `json:"uploaded_by"`
+	IsActive   bool          `json:"is_active"`
+	CreatedAt  time.Time     `json:"created_at"`
+}
+
 type Business struct {
 	ID                   uuid.UUID `json:"id"`
 	Name                 string    `json:"name"`

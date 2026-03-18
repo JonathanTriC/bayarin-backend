@@ -1319,6 +1319,175 @@
                 }
             }
         },
+        "/qris/generate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieves the active static QRIS for a branch, injects the transaction amount, recalculates CRC-16, and returns the dynamic QRIS string and QR image (base64 PNG). Must complete in \u003c 200ms.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "qris"
+                ],
+                "summary": "Generate dynamic QRIS",
+                "parameters": [
+                    {
+                        "description": "Branch ID and transaction amount",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/qris.GenerateQRISInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Dynamic QRIS string and image",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Missing amount or no active QRIS",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/qris/history": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns all QRIS records for a branch. Image URLs are signed Supabase Storage URLs (1 hour expiry).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "qris"
+                ],
+                "summary": "QRIS upload history",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Branch UUID",
+                        "name": "branch_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "QRIS history",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - owner only",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/qris/upload": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Upload a static QRIS image for a branch. Decodes the QR, validates CRC-16, stores image in Supabase Storage, saves QRIS string to DB. Deactivates previous QRIS for the branch.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "qris"
+                ],
+                "summary": "Upload static QRIS",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "QRIS image file (PNG or JPG, max 2MB)",
+                        "name": "image",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Branch UUID",
+                        "name": "branch_id",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "QRIS uploaded and stored successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid image, invalid QRIS string, or CRC mismatch",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - owner only",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/staff": {
             "get": {
                 "security": [
@@ -2349,6 +2518,17 @@
                     "type": "string"
                 },
                 "paid_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "qris.GenerateQRISInput": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "branch_id": {
                     "type": "string"
                 }
             }

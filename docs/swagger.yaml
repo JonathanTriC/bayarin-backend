@@ -458,6 +458,13 @@ definitions:
       paid_at:
         type: string
     type: object
+  qris.GenerateQRISInput:
+    properties:
+      amount:
+        type: integer
+      branch_id:
+        type: string
+    type: object
   staff.CreateStaffInput:
     properties:
       branch_id:
@@ -1384,6 +1391,122 @@ paths:
       summary: Search orders
       tags:
       - Orders
+  /qris/generate:
+    post:
+      consumes:
+      - application/json
+      description: Retrieves the active static QRIS for a branch, injects the transaction
+        amount, recalculates CRC-16, and returns the dynamic QRIS string and QR image
+        (base64 PNG). Must complete in < 200ms.
+      parameters:
+      - description: Branch ID and transaction amount
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/qris.GenerateQRISInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Dynamic QRIS string and image
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Missing amount or no active QRIS
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Generate dynamic QRIS
+      tags:
+      - qris
+  /qris/history:
+    get:
+      description: Returns all QRIS records for a branch. Image URLs are signed Supabase
+        Storage URLs (1 hour expiry).
+      parameters:
+      - description: Branch UUID
+        in: query
+        name: branch_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: QRIS history
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden - owner only
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: QRIS upload history
+      tags:
+      - qris
+  /qris/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload a static QRIS image for a branch. Decodes the QR, validates
+        CRC-16, stores image in Supabase Storage, saves QRIS string to DB. Deactivates
+        previous QRIS for the branch.
+      parameters:
+      - description: QRIS image file (PNG or JPG, max 2MB)
+        in: formData
+        name: image
+        required: true
+        type: file
+      - description: Branch UUID
+        in: formData
+        name: branch_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: QRIS uploaded and stored successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid image, invalid QRIS string, or CRC mismatch
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden - owner only
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Upload static QRIS
+      tags:
+      - qris
   /staff:
     get:
       description: Returns all staff members for the authenticated owner's business
