@@ -155,6 +155,9 @@ func main() {
 	// ── TABLES ──
 	api.Get("/tables/search", authMW, middleware.RequireCashierOrOwner(), tableHdlr.Search) // cashier + owner
 	api.Get("/tables", authMW, middleware.RequireCashierOrOwner(), tableHdlr.List)          // cashier + owner
+	api.Patch("/tables/:id/reserve", authMW, middleware.RequireCashierOrOwner(), tableHdlr.Reserve)
+	api.Patch("/tables/:id/clear", authMW, middleware.RequireCashierOrOwner(), tableHdlr.ClearStatus)
+
 	tableRoute := api.Group("/tables", authMW, middleware.RequireOwner())
 	tableRoute.Post("/", tableHdlr.Create)
 	tableRoute.Patch("/:id", tableHdlr.Update)

@@ -134,7 +134,7 @@ func (s *Service) Pay(businessID, orderID uuid.UUID, input PayOrderInput) (*Paym
 
 	// Step 6: Release table if dine_in.
 	if orderType == "dine_in" && tableID.Valid {
-		_, err = tx.Exec(`UPDATE tables SET status='available' WHERE id=$1`, tableID.String)
+		_, err = tx.Exec(`UPDATE tables SET status='available', reserved_by=NULL, reserved_note=NULL, updated_at=NOW() WHERE id=$1`, tableID.String)
 		if err != nil {
 			return nil, fmt.Errorf("release table: %w", err)
 		}

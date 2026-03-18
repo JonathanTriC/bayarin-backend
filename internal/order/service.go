@@ -153,6 +153,25 @@ func (s *Service) Create(auth middleware.AuthContext, input CreateOrderInput) (*
 		return nil, fmt.Errorf("lock branch: %w", err)
 	}
 
+	// Table Validation
+	if input.Type == "dine_in" && input.TableID != nil {
+		var tableBranchID uuid.UUID
+		var tableStatus string
+		err := tx.QueryRow(`SELECT branch_id, status FROM tables WHERE id = $1 FOR UPDATE`, input.TableID).Scan(&tableBranchID, &tableStatus)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, errors.New("table not found")
+			}
+			return nil, fmt.Errorf("lock table: %w", err)
+		}
+		if tableBranchID != input.BranchID {
+			return nil, errors.New("table does not belong to this branch")
+		}
+		if tableStatus == "occupied" {
+			return nil, errors.New("table is currently occupied")
+		}
+	}
+
 	var nextSeq int
 	err = tx.QueryRow(`
 		SELECT COALESCE(MAX(CAST(SUBSTRING(order_number FROM 5) AS INTEGER)), 0) + 1
@@ -188,7 +207,7 @@ func (s *Service) Create(auth middleware.AuthContext, input CreateOrderInput) (*
 
 	// Mark table as occupied if dine_in.
 	if input.Type == "dine_in" && input.TableID != nil {
-		_, _ = tx.Exec(`UPDATE tables SET status='occupied' WHERE id=$1`, input.TableID)
+		_, _ = tx.Exec(`UPDATE tables SET status='occupied', reserved_by=NULL, reserved_note=NULL, updated_at=NOW() WHERE id=$1`, input.TableID)
 	}
 	if err := tx.Commit(); err != nil {
 		return nil, err

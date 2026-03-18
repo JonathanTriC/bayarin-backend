@@ -2019,6 +2019,116 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/tables/{id}/clear": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Manually set table back to available. Cannot clear if table has an active open order.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tables"
+                ],
+                "summary": "Clear table status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Table UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Table cleared",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Active order exists on this table",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/tables/{id}/reserve": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mark a table as reserved. Cannot reserve an occupied table.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tables"
+                ],
+                "summary": "Reserve a table",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Table UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Reservation note",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/table.ReserveTableInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Table reserved",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Table is occupied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -2816,6 +2926,14 @@ const docTemplate = `{
                 }
             }
         },
+        "table.ReserveTableInput": {
+            "type": "object",
+            "properties": {
+                "note": {
+                    "type": "string"
+                }
+            }
+        },
         "table.Table": {
             "type": "object",
             "properties": {
@@ -2834,7 +2952,17 @@ const docTemplate = `{
                 "qr_code": {
                     "type": "string"
                 },
+                "reserved_by": {
+                    "type": "string"
+                },
+                "reserved_note": {
+                    "type": "string"
+                },
                 "status": {
+                    "description": "\"available\", \"occupied\", \"reserved\"",
+                    "type": "string"
+                },
+                "updated_at": {
                     "type": "string"
                 }
             }

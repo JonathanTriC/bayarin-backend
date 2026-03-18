@@ -519,6 +519,11 @@ definitions:
       qr_code:
         type: string
     type: object
+  table.ReserveTableInput:
+    properties:
+      note:
+        type: string
+    type: object
   table.Table:
     properties:
       branch_id:
@@ -531,7 +536,14 @@ definitions:
         type: string
       qr_code:
         type: string
+      reserved_by:
+        type: string
+      reserved_note:
+        type: string
       status:
+        description: '"available", "occupied", "reserved"'
+        type: string
+      updated_at:
         type: string
     type: object
   table.UpdateTableInput:
@@ -1813,6 +1825,79 @@ paths:
       summary: Update table
       tags:
       - Tables
+  /tables/{id}/clear:
+    patch:
+      description: Manually set table back to available. Cannot clear if table has
+        an active open order.
+      parameters:
+      - description: Table UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Table cleared
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Active order exists on this table
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Clear table status
+      tags:
+      - tables
+  /tables/{id}/reserve:
+    patch:
+      consumes:
+      - application/json
+      description: Mark a table as reserved. Cannot reserve an occupied table.
+      parameters:
+      - description: Table UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Reservation note
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/table.ReserveTableInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Table reserved
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Table is occupied
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Reserve a table
+      tags:
+      - tables
   /tables/search:
     get:
       description: Search tables by name (case-insensitive). Optionally filter by

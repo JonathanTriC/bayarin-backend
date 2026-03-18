@@ -30,6 +30,7 @@ type Querier interface {
 	DeleteOrderItem(ctx context.Context, arg DeleteOrderItemParams) error
 	DeleteOrderItemModifiers(ctx context.Context, orderItemID uuid.UUID) error
 	GetActiveBranchQRIS(ctx context.Context, branchID uuid.UUID) (BranchQri, error)
+	GetActiveOrderByTable(ctx context.Context, tableID uuid.NullUUID) (uuid.UUID, error)
 	GetBranchByID(ctx context.Context, arg GetBranchByIDParams) (Branch, error)
 	GetBusiness(ctx context.Context, id uuid.UUID) (Business, error)
 	GetCashierDashboard(ctx context.Context, arg GetCashierDashboardParams) (GetCashierDashboardRow, error)
@@ -51,6 +52,7 @@ type Querier interface {
 	GetSessionByToken(ctx context.Context, token string) (Session, error)
 	GetStaffByID(ctx context.Context, arg GetStaffByIDParams) (User, error)
 	GetTableByID(ctx context.Context, arg GetTableByIDParams) (Table, error)
+	GetTableByIDForUpdate(ctx context.Context, id uuid.UUID) (Table, error)
 	GetTopMenuItems(ctx context.Context, businessID uuid.UUID) ([]GetTopMenuItemsRow, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
@@ -67,9 +69,12 @@ type Querier interface {
 	ListOrdersByStatusAndBranch(ctx context.Context, arg ListOrdersByStatusAndBranchParams) ([]Order, error)
 	ListStaff(ctx context.Context, businessID uuid.UUID) ([]User, error)
 	ListTables(ctx context.Context, arg ListTablesParams) ([]Table, error)
+	ListTablesByBranch(ctx context.Context, branchID uuid.UUID) ([]Table, error)
 	ListTablesByBusiness(ctx context.Context, businessID uuid.UUID) ([]Table, error)
 	RevokeSession(ctx context.Context, token string) error
-	SetTableAvailable(ctx context.Context, id uuid.UUID) error
+	SetTableAvailable(ctx context.Context, id uuid.UUID) (Table, error)
+	SetTableOccupied(ctx context.Context, id uuid.UUID) (Table, error)
+	SetTableReserved(ctx context.Context, arg SetTableReservedParams) (Table, error)
 	UpdateBranch(ctx context.Context, arg UpdateBranchParams) (Branch, error)
 	UpdateBusiness(ctx context.Context, arg UpdateBusinessParams) (Business, error)
 	UpdateMenuItem(ctx context.Context, arg UpdateMenuItemParams) (MenuItem, error)

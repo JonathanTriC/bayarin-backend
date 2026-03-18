@@ -146,6 +146,7 @@ type TableStatus string
 const (
 	TableStatusAvailable TableStatus = "available"
 	TableStatusOccupied  TableStatus = "occupied"
+	TableStatusReserved  TableStatus = "reserved"
 )
 
 func (e *TableStatus) Scan(src interface{}) error {
@@ -339,12 +340,15 @@ type Session struct {
 }
 
 type Table struct {
-	ID        uuid.UUID   `json:"id"`
-	BranchID  uuid.UUID   `json:"branch_id"`
-	Name      string      `json:"name"`
-	QrCode    string      `json:"qr_code"`
-	Status    TableStatus `json:"status"`
-	CreatedAt time.Time   `json:"created_at"`
+	ID           uuid.UUID      `json:"id"`
+	BranchID     uuid.UUID      `json:"branch_id"`
+	Name         string         `json:"name"`
+	QrCode       string         `json:"qr_code"`
+	Status       TableStatus    `json:"status"`
+	CreatedAt    time.Time      `json:"created_at"`
+	ReservedBy   uuid.NullUUID  `json:"reserved_by"`
+	ReservedNote sql.NullString `json:"reserved_note"`
+	UpdatedAt    sql.NullTime   `json:"updated_at"`
 }
 
 type Transaction struct {

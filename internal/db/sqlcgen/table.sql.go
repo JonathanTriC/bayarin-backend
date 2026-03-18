@@ -7,6 +7,7 @@ package sqlcgen
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
@@ -14,7 +15,7 @@ import (
 const createTable = `-- name: CreateTable :one
 INSERT INTO tables (branch_id, name, qr_code)
 VALUES ($1, $2, $3)
-RETURNING id, branch_id, name, qr_code, status, created_at
+RETURNING id, branch_id, name, qr_code, status, created_at, reserved_by, reserved_note, updated_at
 `
 
 type CreateTableParams struct {
@@ -33,12 +34,29 @@ func (q *Queries) CreateTable(ctx context.Context, arg CreateTableParams) (Table
 		&i.QrCode,
 		&i.Status,
 		&i.CreatedAt,
+		&i.ReservedBy,
+		&i.ReservedNote,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
+const getActiveOrderByTable = `-- name: GetActiveOrderByTable :one
+SELECT id FROM orders
+WHERE table_id = $1
+  AND status = 'open'
+LIMIT 1
+`
+
+func (q *Queries) GetActiveOrderByTable(ctx context.Context, tableID uuid.NullUUID) (uuid.UUID, error) {
+	row := q.db.QueryRowContext(ctx, getActiveOrderByTable, tableID)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const getTableByID = `-- name: GetTableByID :one
-SELECT t.id, t.branch_id, t.name, t.qr_code, t.status, t.created_at
+SELECT t.id, t.branch_id, t.name, t.qr_code, t.status, t.created_at, t.reserved_by, t.reserved_note, t.updated_at
 FROM tables t
 JOIN branches b ON b.id = t.branch_id
 WHERE t.id          = $1
@@ -61,12 +79,38 @@ func (q *Queries) GetTableByID(ctx context.Context, arg GetTableByIDParams) (Tab
 		&i.QrCode,
 		&i.Status,
 		&i.CreatedAt,
+		&i.ReservedBy,
+		&i.ReservedNote,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getTableByIDForUpdate = `-- name: GetTableByIDForUpdate :one
+SELECT id, branch_id, name, qr_code, status, created_at, reserved_by, reserved_note, updated_at FROM tables
+WHERE id = $1
+FOR UPDATE
+`
+
+func (q *Queries) GetTableByIDForUpdate(ctx context.Context, id uuid.UUID) (Table, error) {
+	row := q.db.QueryRowContext(ctx, getTableByIDForUpdate, id)
+	var i Table
+	err := row.Scan(
+		&i.ID,
+		&i.BranchID,
+		&i.Name,
+		&i.QrCode,
+		&i.Status,
+		&i.CreatedAt,
+		&i.ReservedBy,
+		&i.ReservedNote,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const listTables = `-- name: ListTables :many
-SELECT t.id, t.branch_id, t.name, t.qr_code, t.status, t.created_at
+SELECT t.id, t.branch_id, t.name, t.qr_code, t.status, t.created_at, t.reserved_by, t.reserved_note, t.updated_at
 FROM tables t
 JOIN branches b ON b.id = t.branch_id
 WHERE b.business_id = $1
@@ -95,6 +139,48 @@ func (q *Queries) ListTables(ctx context.Context, arg ListTablesParams) ([]Table
 			&i.QrCode,
 			&i.Status,
 			&i.CreatedAt,
+			&i.ReservedBy,
+			&i.ReservedNote,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTablesByBranch = `-- name: ListTablesByBranch :many
+SELECT id, branch_id, name, qr_code, status, created_at, reserved_by, reserved_note, updated_at FROM tables
+WHERE branch_id = $1
+ORDER BY name ASC
+`
+
+func (q *Queries) ListTablesByBranch(ctx context.Context, branchID uuid.UUID) ([]Table, error) {
+	rows, err := q.db.QueryContext(ctx, listTablesByBranch, branchID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Table{}
+	for rows.Next() {
+		var i Table
+		if err := rows.Scan(
+			&i.ID,
+			&i.BranchID,
+			&i.Name,
+			&i.QrCode,
+			&i.Status,
+			&i.CreatedAt,
+			&i.ReservedBy,
+			&i.ReservedNote,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -110,7 +196,7 @@ func (q *Queries) ListTables(ctx context.Context, arg ListTablesParams) ([]Table
 }
 
 const listTablesByBusiness = `-- name: ListTablesByBusiness :many
-SELECT t.id, t.branch_id, t.name, t.qr_code, t.status, t.created_at
+SELECT t.id, t.branch_id, t.name, t.qr_code, t.status, t.created_at, t.reserved_by, t.reserved_note, t.updated_at
 FROM tables t
 JOIN branches b ON b.id = t.branch_id
 WHERE b.business_id = $1
@@ -133,6 +219,9 @@ func (q *Queries) ListTablesByBusiness(ctx context.Context, businessID uuid.UUID
 			&i.QrCode,
 			&i.Status,
 			&i.CreatedAt,
+			&i.ReservedBy,
+			&i.ReservedNote,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -147,15 +236,82 @@ func (q *Queries) ListTablesByBusiness(ctx context.Context, businessID uuid.UUID
 	return items, nil
 }
 
-const setTableAvailable = `-- name: SetTableAvailable :exec
+const setTableAvailable = `-- name: SetTableAvailable :one
 UPDATE tables
-SET status = 'available'
+SET status = 'available', reserved_by = NULL, reserved_note = NULL, updated_at = NOW()
 WHERE id = $1
+RETURNING id, branch_id, name, qr_code, status, created_at, reserved_by, reserved_note, updated_at
 `
 
-func (q *Queries) SetTableAvailable(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.ExecContext(ctx, setTableAvailable, id)
-	return err
+func (q *Queries) SetTableAvailable(ctx context.Context, id uuid.UUID) (Table, error) {
+	row := q.db.QueryRowContext(ctx, setTableAvailable, id)
+	var i Table
+	err := row.Scan(
+		&i.ID,
+		&i.BranchID,
+		&i.Name,
+		&i.QrCode,
+		&i.Status,
+		&i.CreatedAt,
+		&i.ReservedBy,
+		&i.ReservedNote,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const setTableOccupied = `-- name: SetTableOccupied :one
+UPDATE tables
+SET status = 'occupied', reserved_by = NULL, reserved_note = NULL, updated_at = NOW()
+WHERE id = $1
+RETURNING id, branch_id, name, qr_code, status, created_at, reserved_by, reserved_note, updated_at
+`
+
+func (q *Queries) SetTableOccupied(ctx context.Context, id uuid.UUID) (Table, error) {
+	row := q.db.QueryRowContext(ctx, setTableOccupied, id)
+	var i Table
+	err := row.Scan(
+		&i.ID,
+		&i.BranchID,
+		&i.Name,
+		&i.QrCode,
+		&i.Status,
+		&i.CreatedAt,
+		&i.ReservedBy,
+		&i.ReservedNote,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const setTableReserved = `-- name: SetTableReserved :one
+UPDATE tables
+SET status = 'reserved', reserved_by = $2, reserved_note = $3, updated_at = NOW()
+WHERE id = $1
+RETURNING id, branch_id, name, qr_code, status, created_at, reserved_by, reserved_note, updated_at
+`
+
+type SetTableReservedParams struct {
+	ID           uuid.UUID      `json:"id"`
+	ReservedBy   uuid.NullUUID  `json:"reserved_by"`
+	ReservedNote sql.NullString `json:"reserved_note"`
+}
+
+func (q *Queries) SetTableReserved(ctx context.Context, arg SetTableReservedParams) (Table, error) {
+	row := q.db.QueryRowContext(ctx, setTableReserved, arg.ID, arg.ReservedBy, arg.ReservedNote)
+	var i Table
+	err := row.Scan(
+		&i.ID,
+		&i.BranchID,
+		&i.Name,
+		&i.QrCode,
+		&i.Status,
+		&i.CreatedAt,
+		&i.ReservedBy,
+		&i.ReservedNote,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const updateTable = `-- name: UpdateTable :one
@@ -165,7 +321,7 @@ SET
     qr_code = COALESCE($3, qr_code),
     status  = COALESCE($4, status)
 WHERE id = $1
-RETURNING id, branch_id, name, qr_code, status, created_at
+RETURNING id, branch_id, name, qr_code, status, created_at, reserved_by, reserved_note, updated_at
 `
 
 type UpdateTableParams struct {
@@ -190,6 +346,9 @@ func (q *Queries) UpdateTable(ctx context.Context, arg UpdateTableParams) (Table
 		&i.QrCode,
 		&i.Status,
 		&i.CreatedAt,
+		&i.ReservedBy,
+		&i.ReservedNote,
+		&i.UpdatedAt,
 	)
 	return i, err
 }

@@ -128,3 +128,68 @@ func (h *Handler) Update(c *fiber.Ctx) error {
 	}
 	return c.JSON(fiber.Map{"success": true, "data": t})
 }
+
+// Reserve godoc
+//
+//	@Summary		Reserve a table
+//	@Description	Mark a table as reserved. Cannot reserve an occupied table.
+//	@Tags			tables
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id		path	string				true	"Table UUID"
+//	@Param			body	body	ReserveTableInput	true	"Reservation note"
+//	@Success		200		{object}	map[string]interface{}	"Table reserved"
+//	@Failure		400		{object}	map[string]interface{}	"Table is occupied"
+//	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
+//	@Router			/tables/{id}/reserve [patch]
+func (h *Handler) Reserve(c *fiber.Ctx) error {
+	auth := c.Locals("auth").(middleware.AuthContext)
+	tableID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": "invalid table id"})
+	}
+	if auth.BranchID == nil {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"success": false, "error": "only cashiers assigned to a branch can reserve tables natively"})
+	}
+
+	var input ReserveTableInput
+	if err := c.BodyParser(&input); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": "invalid request body"})
+	}
+
+	t, err := h.svc.Reserve(auth.BusinessID, tableID, *auth.BranchID, auth.UserID, input.Note)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"success": true, "data": t})
+}
+
+// ClearStatus godoc
+//
+//	@Summary		Clear table status
+//	@Description	Manually set table back to available. Cannot clear if table has an active open order.
+//	@Tags			tables
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path	string	true	"Table UUID"
+//	@Success		200	{object}	map[string]interface{}	"Table cleared"
+//	@Failure		400	{object}	map[string]interface{}	"Active order exists on this table"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Router			/tables/{id}/clear [patch]
+func (h *Handler) ClearStatus(c *fiber.Ctx) error {
+	auth := c.Locals("auth").(middleware.AuthContext)
+	tableID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": "invalid table id"})
+	}
+	if auth.BranchID == nil {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"success": false, "error": "only cashiers assigned to a branch can clear tables natively"})
+	}
+
+	t, err := h.svc.ClearStatus(auth.BusinessID, tableID, *auth.BranchID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"success": true, "data": t})
+}

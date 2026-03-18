@@ -11,12 +11,15 @@ import (
 
 // Table represents a table entity.
 type Table struct {
-	ID        uuid.UUID `json:"id"`
-	BranchID  uuid.UUID `json:"branch_id"`
-	Name      string    `json:"name"`
-	QRCode    string    `json:"qr_code"`
-	Status    string    `json:"status"`
-	CreatedAt string    `json:"created_at"`
+	ID           uuid.UUID   `json:"id"`
+	BranchID     uuid.UUID   `json:"branch_id"`
+	Name         string      `json:"name"`
+	QRCode       string      `json:"qr_code"`
+	Status       string      `json:"status"` // "available", "occupied", "reserved"
+	ReservedBy   *uuid.UUID  `json:"reserved_by,omitempty"`
+	ReservedNote *string     `json:"reserved_note,omitempty"`
+	UpdatedAt    *string     `json:"updated_at,omitempty"`
+	CreatedAt    string      `json:"created_at"`
 }
 
 // CreateTableInput is the payload for creating a table.
@@ -24,6 +27,10 @@ type CreateTableInput struct {
 	BranchID uuid.UUID `json:"branch_id"`
 	Name     string    `json:"name"`
 	QRCode   string    `json:"qr_code"`
+}
+
+type ReserveTableInput struct {
+	Note string `json:"note"`
 }
 
 // UpdateTableInput is the payload for updating a table.
@@ -49,14 +56,14 @@ func (s *Service) List(businessID uuid.UUID, branchIDFilter *uuid.UUID) ([]Table
 
 	if branchIDFilter != nil {
 		rows, err = s.db.Query(
-			`SELECT t.id, t.branch_id, t.name, t.qr_code, t.status, t.created_at
+			`SELECT t.id, t.branch_id, t.name, t.qr_code, t.status, t.reserved_by, t.reserved_note, t.updated_at, t.created_at
 			 FROM tables t
 			 JOIN branches b ON b.id = t.branch_id
 			 WHERE b.business_id = $1 AND t.branch_id = $2
 			 ORDER BY t.name`, businessID, *branchIDFilter)
 	} else {
 		rows, err = s.db.Query(
-			`SELECT t.id, t.branch_id, t.name, t.qr_code, t.status, t.created_at
+			`SELECT t.id, t.branch_id, t.name, t.qr_code, t.status, t.reserved_by, t.reserved_note, t.updated_at, t.created_at
 			 FROM tables t
 			 JOIN branches b ON b.id = t.branch_id
 			 WHERE b.business_id = $1
@@ -70,8 +77,21 @@ func (s *Service) List(businessID uuid.UUID, branchIDFilter *uuid.UUID) ([]Table
 	var tables []Table
 	for rows.Next() {
 		var t Table
-		if err := rows.Scan(&t.ID, &t.BranchID, &t.Name, &t.QRCode, &t.Status, &t.CreatedAt); err != nil {
+		var rBy sql.NullString
+		var rNote sql.NullString
+		var upAt sql.NullString
+		if err := rows.Scan(&t.ID, &t.BranchID, &t.Name, &t.QRCode, &t.Status, &rBy, &rNote, &upAt, &t.CreatedAt); err != nil {
 			return nil, err
+		}
+		if rBy.Valid {
+			pid, _ := uuid.Parse(rBy.String)
+			t.ReservedBy = &pid
+		}
+		if rNote.Valid {
+			t.ReservedNote = &rNote.String
+		}
+		if upAt.Valid {
+			t.UpdatedAt = &upAt.String
 		}
 		tables = append(tables, t)
 	}
@@ -97,11 +117,12 @@ func (s *Service) Create(businessID uuid.UUID, input CreateTableInput) (*Table, 
 	}
 
 	var t Table
+	var rBy, rNote, upAt sql.NullString
 	err := s.db.QueryRow(
 		`INSERT INTO tables (branch_id, name, qr_code) VALUES ($1, $2, $3)
-		 RETURNING id, branch_id, name, qr_code, status, created_at`,
+		 RETURNING id, branch_id, name, qr_code, status, reserved_by, reserved_note, updated_at, created_at`,
 		input.BranchID, input.Name, input.QRCode,
-	).Scan(&t.ID, &t.BranchID, &t.Name, &t.QRCode, &t.Status, &t.CreatedAt)
+	).Scan(&t.ID, &t.BranchID, &t.Name, &t.QRCode, &t.Status, &rBy, &rNote, &upAt, &t.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("create table: %w", err)
 	}
@@ -111,12 +132,13 @@ func (s *Service) Create(businessID uuid.UUID, input CreateTableInput) (*Table, 
 // Update applies partial updates to a table.
 func (s *Service) Update(businessID, tableID uuid.UUID, input UpdateTableInput) (*Table, error) {
 	var t Table
+	var rBy, rNote, upAt sql.NullString
 	row := s.db.QueryRow(
-		`SELECT t.id, t.branch_id, t.name, t.qr_code, t.status, t.created_at
+		`SELECT t.id, t.branch_id, t.name, t.qr_code, t.status, t.reserved_by, t.reserved_note, t.updated_at, t.created_at
 		 FROM tables t
 		 JOIN branches b ON b.id = t.branch_id
 		 WHERE t.id = $1 AND b.business_id = $2`, tableID, businessID)
-	if err := row.Scan(&t.ID, &t.BranchID, &t.Name, &t.QRCode, &t.Status, &t.CreatedAt); err != nil {
+	if err := row.Scan(&t.ID, &t.BranchID, &t.Name, &t.QRCode, &t.Status, &rBy, &rNote, &upAt, &t.CreatedAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, errors.New("table not found")
 		}
@@ -152,7 +174,7 @@ func (s *Service) Search(businessID uuid.UUID, query string, branchIDFilter *uui
 	like := "%" + strings.TrimSpace(query) + "%"
 	args := []interface{}{businessID, like}
 
-	sqlStr := `SELECT t.id, t.branch_id, t.name, t.qr_code, t.status, t.created_at
+	sqlStr := `SELECT t.id, t.branch_id, t.name, t.qr_code, t.status, t.reserved_by, t.reserved_note, t.updated_at, t.created_at
 	           FROM tables t
 	           JOIN branches b ON b.id = t.branch_id
 	           WHERE b.business_id = $1 AND t.name ILIKE $2`
@@ -176,8 +198,21 @@ func (s *Service) Search(businessID uuid.UUID, query string, branchIDFilter *uui
 	var tables []Table
 	for rows.Next() {
 		var t Table
-		if err := rows.Scan(&t.ID, &t.BranchID, &t.Name, &t.QRCode, &t.Status, &t.CreatedAt); err != nil {
+		var rBy sql.NullString
+		var rNote sql.NullString
+		var upAt sql.NullString
+		if err := rows.Scan(&t.ID, &t.BranchID, &t.Name, &t.QRCode, &t.Status, &rBy, &rNote, &upAt, &t.CreatedAt); err != nil {
 			return nil, err
+		}
+		if rBy.Valid {
+			pid, _ := uuid.Parse(rBy.String)
+			t.ReservedBy = &pid
+		}
+		if rNote.Valid {
+			t.ReservedNote = &rNote.String
+		}
+		if upAt.Valid {
+			t.UpdatedAt = &upAt.String
 		}
 		tables = append(tables, t)
 	}
@@ -185,4 +220,121 @@ func (s *Service) Search(businessID uuid.UUID, query string, branchIDFilter *uui
 		tables = []Table{}
 	}
 	return tables, nil
+}
+
+// Reserve marks a table as reserved.
+func (s *Service) Reserve(businessID uuid.UUID, tableID uuid.UUID, branchID uuid.UUID, reservedBy uuid.UUID, note string) (*Table, error) {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	var t Table
+	var rBy, rNote, upAt sql.NullString
+	err = tx.QueryRow(`
+		SELECT t.id, t.branch_id, t.name, t.qr_code, t.status, t.reserved_by, t.reserved_note, t.updated_at, t.created_at
+		FROM tables t
+		JOIN branches b ON b.id = t.branch_id
+		WHERE t.id = $1 AND b.business_id = $2 FOR UPDATE
+	`, tableID, businessID).Scan(&t.ID, &t.BranchID, &t.Name, &t.QRCode, &t.Status, &rBy, &rNote, &upAt, &t.CreatedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.New("table not found")
+		}
+		return nil, fmt.Errorf("lock table: %w", err)
+	}
+
+	if t.BranchID != branchID {
+		return nil, errors.New("table does not belong to this branch")
+	}
+
+	if t.Status == "occupied" {
+		return nil, errors.New("table is currently occupied")
+	}
+
+	err = tx.QueryRow(`
+		UPDATE tables
+		SET status = 'reserved', reserved_by = $2, reserved_note = $3, updated_at = NOW()
+		WHERE id = $1
+		RETURNING id, branch_id, name, qr_code, status, reserved_by, reserved_note, updated_at, created_at
+	`, tableID, reservedBy, note).Scan(&t.ID, &t.BranchID, &t.Name, &t.QRCode, &t.Status, &rBy, &rNote, &upAt, &t.CreatedAt)
+
+	if err != nil {
+		return nil, fmt.Errorf("reserve table: %w", err)
+	}
+
+	if rBy.Valid {
+		pid, _ := uuid.Parse(rBy.String)
+		t.ReservedBy = &pid
+	}
+	if rNote.Valid {
+		t.ReservedNote = &rNote.String
+	}
+	if upAt.Valid {
+		t.UpdatedAt = &upAt.String
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit tx: %w", err)
+	}
+	return &t, nil
+}
+
+// ClearStatus resets an occupied or reserved table to available.
+func (s *Service) ClearStatus(businessID uuid.UUID, tableID uuid.UUID, branchID uuid.UUID) (*Table, error) {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	var t Table
+	var rBy, rNote, upAt sql.NullString
+	err = tx.QueryRow(`
+		SELECT t.id, t.branch_id, t.name, t.qr_code, t.status, t.reserved_by, t.reserved_note, t.updated_at, t.created_at
+		FROM tables t
+		JOIN branches b ON b.id = t.branch_id
+		WHERE t.id = $1 AND b.business_id = $2 FOR UPDATE
+	`, tableID, businessID).Scan(&t.ID, &t.BranchID, &t.Name, &t.QRCode, &t.Status, &rBy, &rNote, &upAt, &t.CreatedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.New("table not found")
+		}
+		return nil, fmt.Errorf("lock table: %w", err)
+	}
+
+	if t.BranchID != branchID {
+		return nil, errors.New("table does not belong to this branch")
+	}
+
+	if t.Status == "occupied" {
+		var activeOrderID uuid.UUID
+		err := tx.QueryRow(`SELECT id FROM orders WHERE table_id = $1 AND status = 'open' LIMIT 1`, tableID).Scan(&activeOrderID)
+		if err == nil {
+			return nil, errors.New("cannot clear table with an active order — complete payment first")
+		} else if !errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("query active order: %w", err)
+		}
+	}
+
+	err = tx.QueryRow(`
+		UPDATE tables
+		SET status = 'available', reserved_by = NULL, reserved_note = NULL, updated_at = NOW()
+		WHERE id = $1
+		RETURNING id, branch_id, name, qr_code, status, reserved_by, reserved_note, updated_at, created_at
+	`, tableID).Scan(&t.ID, &t.BranchID, &t.Name, &t.QRCode, &t.Status, &rBy, &rNote, &upAt, &t.CreatedAt)
+
+	if err != nil {
+		return nil, fmt.Errorf("clear table status: %w", err)
+	}
+	
+	if upAt.Valid {
+		t.UpdatedAt = &upAt.String
+	}
+	
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit tx: %w", err)
+	}
+	return &t, nil
 }

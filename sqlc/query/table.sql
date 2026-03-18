@@ -35,7 +35,36 @@ SET
 WHERE id = $1
 RETURNING *;
 
--- name: SetTableAvailable :exec
+-- name: SetTableAvailable :one
 UPDATE tables
-SET status = 'available'
-WHERE id = $1;
+SET status = 'available', reserved_by = NULL, reserved_note = NULL, updated_at = NOW()
+WHERE id = $1
+RETURNING *;
+
+-- name: GetTableByIDForUpdate :one
+SELECT * FROM tables
+WHERE id = $1
+FOR UPDATE;
+
+-- name: SetTableOccupied :one
+UPDATE tables
+SET status = 'occupied', reserved_by = NULL, reserved_note = NULL, updated_at = NOW()
+WHERE id = $1
+RETURNING *;
+
+-- name: SetTableReserved :one
+UPDATE tables
+SET status = 'reserved', reserved_by = $2, reserved_note = $3, updated_at = NOW()
+WHERE id = $1
+RETURNING *;
+
+-- name: ListTablesByBranch :many
+SELECT * FROM tables
+WHERE branch_id = $1
+ORDER BY name ASC;
+
+-- name: GetActiveOrderByTable :one
+SELECT id FROM orders
+WHERE table_id = $1
+  AND status = 'open'
+LIMIT 1;
